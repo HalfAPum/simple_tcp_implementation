@@ -1,0 +1,80 @@
+#include <iostream>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#define ADDR_TO_BIND "127.0.0.1"
+#define DEFAULT_PORT 8080
+#define BUFFLEN 256
+#define RECV_ERROR (-1)
+
+bool checkResultFail(const bool result, const std::string &actionName, const SOCKET socket) {
+    if (!result) return false;
+
+    std::cout << actionName << " failed with error: " << WSAGetLastError() << std::endl;
+
+    closesocket(socket);
+
+    return true;
+}
+
+void printMessage(char buffer[BUFFLEN], const int size) {
+    std::cout << "Message size: " << size << std::endl;
+
+    for(int i = 0 ; i < size ; ++i){
+        std::cout << buffer[i];
+    }
+    std::cout << std::endl;
+    printf("\n");
+}
+
+int main() {
+    WSAData wsaData = {};
+
+    //Initialize winsock
+    int iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+    if (iResult != 0) {
+        std::cout << "WSAStartup faield with error: " << iResult << std::endl;
+        return 1;
+    }
+
+    //Try IPPROTO_RAW when succeed with UDP
+    SOCKET listenSocket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
+    if (listenSocket == INVALID_SOCKET) {
+        std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
+        WSACleanup();
+        return 1;
+    }
+
+    if (!setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEADDR, nullptr, 0)) {
+        perror("setsockopt");
+        return 1;
+    }
+
+    sockaddr_in sockstr {};
+    sockstr.sin_addr.s_addr = inet_addr(ADDR_TO_BIND);
+    sockstr.sin_family = AF_INET;
+    sockstr.sin_port = DEFAULT_PORT;
+    constexpr auto sockstr_size = static_cast<socklen_t>(sizeof(sockstr));
+
+    iResult = bind(listenSocket, reinterpret_cast<sockaddr *>(&sockstr), sockstr_size);
+    if (checkResultFail(iResult == SOCKET_ERROR, "bind", listenSocket)) {
+        return 1;
+    }
+    std::cout << "bind result " << iResult << std::endl;
+
+
+    char recvbuf[BUFFLEN];
+    int recvbuflen = BUFFLEN;
+
+    while (true) {
+        const int recvResult = recv(listenSocket, recvbuf, recvbuflen, 0);
+
+        if (checkResultFail(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
+            return 1;
+        }
+
+        printMessage(recvbuf, recvResult);
+    }
+
+    return 0;
+}
