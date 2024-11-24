@@ -5,7 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(simple_tcp_implementation main.cpp
         IPv4Header.h
-        IPv4Header.cpp)
+        IPv4Header.cpp
+        TCPHeader.h
+        TCPHeader.cpp
+        ByteExtractor.h
+        ByteExtractor.cpp)
 
 if(WIN32)
     target_link_libraries(simple_tcp_implementation wsock32 ws2_32)

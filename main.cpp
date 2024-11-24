@@ -5,6 +5,7 @@
 #include <ws2tcpip.h>
 
 #include "IPv4Header.h"
+#include "TCPHeader.h"
 
 #define ADDR_TO_BIND "127.0.0.1"
 #define DEFAULT_PORT 8080
@@ -83,7 +84,8 @@ int main() {
     char recvbuf[BUFFLEN];
     int recvbuflen = BUFFLEN;
 
-    while (true) {
+    int i= -1;
+    while (++i < 3) {
         const int recvResult = recv(listenSocket, recvbuf, recvbuflen, 0);
 
         if (checkResultFail(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
@@ -101,26 +103,11 @@ int main() {
         }
 
         auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
+        auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + 20);
 
         printMessage(recvbuf, recvResult);
-        closesocket(listenSocket);
-        break;
+        // closesocket(listenSocket);
     }
 
     return 0;
 }
-
-// TCP Header:
-//
-// Source Port (16 bits)
-// Destination Port (16 bits)
-// Sequence Number (32 bits)
-// Acknowledgment Number (32 bits)
-// Data Offset (4 bits)
-// Reserved (6 bits)
-// Flags (6 bits)  
-// Window Size (16 bits)
-// Checksum (16 bits)
-// Urgent Pointer (16 bits)
-// Options (variable length)
-// Data (variable length)
