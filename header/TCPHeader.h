@@ -23,6 +23,7 @@ struct TCPHeader {
     uint16_t windowSize;
     uint16_t checksum;
     uint16_t urgentPointer;
+    uint16_t segmentSize;
 
     static TCPHeader parseTCPHeader(const char* recvbuf);
 };

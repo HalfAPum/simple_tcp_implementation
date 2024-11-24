@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "ByteExtractor.h"
+#include "../ByteExtractor.h"
 
 TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
     TCPHeader header {};
@@ -73,7 +73,40 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
     std::cout << "Urgent pointer " << static_cast<int>(header.urgentPointer) << std::endl;
 
     //Options (variable length)
-    //Ignore Options. Pray they are not present)
+    //Iterate over options until data starts
+    //Default initialize segmentSize to max
+    header.segmentSize = 0xFFFF;
+
+    std::cout << "Options: ";
+    for (int optionIndex = 20; optionIndex < header.dataOffset;) {
+        const uint8_t kind = recvbuf[optionIndex];
+
+        //End of Options List
+        if (kind == 0x00) {
+            std::cout << "End of Options.";
+            break;
+        }
+
+        //No-Operation
+        if (kind == 0x01) {
+            std::cout << "No-Operation, ";
+            ++optionIndex;
+            continue;
+        }
+
+        //Maximum Segment Size
+        if (kind == 0x02) {
+            header.segmentSize = ByteExtractor::get16BitInt(recvbuf + (optionIndex + 2));
+            std::cout << "Maximum Segment Size: " + std::to_string(header.segmentSize) + ", ";
+            optionIndex += 4;
+            continue;
+        }
+
+        //Unknown segment
+        break;
+    }
+
+    std::cout << std::endl;
 
     std::cout << std::endl;
 

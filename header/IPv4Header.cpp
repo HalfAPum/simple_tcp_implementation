@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "ByteExtractor.h"
+#include "../ByteExtractor.h"
 
 IPv4Header IPv4Header::parseIPv4Header(const char* recvbuf) {
     IPv4Header ipv4Header {};

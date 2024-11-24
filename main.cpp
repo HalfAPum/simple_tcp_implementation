@@ -4,8 +4,9 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#include "IPv4Header.h"
-#include "TCPHeader.h"
+#include "header/IPv4Header.h"
+#include "State.h"
+#include "header/TCPHeader.h"
 
 #define ADDR_TO_BIND "127.0.0.1"
 #define DEFAULT_PORT 8080
@@ -13,8 +14,8 @@
 #define RECV_ERROR (-1)
 
 constexpr int IP_HEADER_LENGTH = 20;
-constexpr int TCP_HEADER_LENGTH = 20;
-constexpr int TCP_SEGMENT_LENGTH = IP_HEADER_LENGTH + TCP_HEADER_LENGTH;
+constexpr int TCP_HEADER_MIN_LENGTH = 20;
+constexpr int TCP_SEGMENT_MIN_LENGTH = IP_HEADER_LENGTH + TCP_HEADER_MIN_LENGTH;
 
 bool checkResultFail(const bool result, const std::string &actionName, const SOCKET socket) {
     if (!result) return false;
@@ -44,6 +45,33 @@ void printMessage(char buffer[BUFFLEN], const int size) {
     }
     std::cout << std::endl;
     printf("\n");
+}
+
+//TODO move it later to TCB (Transmission control block)
+State state = LISTEN;
+
+void processSegment(const TCPHeader &tcpHeader) {
+    if (state == LISTEN) {
+        if (tcpHeader.RST) {
+            // An incoming RST should be ignored.  Return.
+            return;
+        }
+
+        // Any acknowledgment is bad if it arrives on a connection still in
+        // the LISTEN state.  An acceptable reset segment should be formed
+        // for any arriving ACK-bearing segment.  The RST should be
+        // formatted as follows:
+        //   <SEQ=SEG.ACK><CTL=RST>
+        // Return.
+
+        if (tcpHeader.ackNumber != 0) {
+            //TODO
+        }
+
+        if (tcpHeader.SYN) {
+
+        }
+    }
 }
 
 int main() {
@@ -79,7 +107,6 @@ int main() {
     if (checkResultFail(iResult == SOCKET_ERROR, "bind", listenSocket)) {
         return 1;
     }
-    std::cout << "bind result " << iResult << std::endl;
 
     char recvbuf[BUFFLEN];
     int recvbuflen = BUFFLEN;
@@ -93,11 +120,11 @@ int main() {
         }
 
         //Verify received Result size.
-        //We should receive IP and TCP headers (each is 20 bytes long).
+        //We should receive IP and TCP headers (each is at least 20 bytes long).
         //Data payload is optional.
-        if (validate(recvResult < TCP_SEGMENT_LENGTH, listenSocket,
+        if (validate(recvResult < TCP_SEGMENT_MIN_LENGTH, listenSocket,
             "Received message has size: " + std::to_string(recvResult) +
-            ". This is less than TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_LENGTH)
+            ". This is less than TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_MIN_LENGTH)
         )) {
             return 1;
         }
@@ -105,8 +132,7 @@ int main() {
         auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
         auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + 20);
 
-        printMessage(recvbuf, recvResult);
-        // closesocket(listenSocket);
+        processSegment(tcpHeader);
     }
 
     return 0;
