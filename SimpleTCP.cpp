@@ -36,9 +36,9 @@ bool checkResultFail(const bool result, const std::string &actionName, const SOC
 }
 
 LocalConnection SimpleTCP::open(const unsigned localPort, bool passive, unsigned timeout) {
-    const LocalConnection localConnection(localPort, inet_addr(ADDR_TO_BIND));
+    auto *localConnection = new LocalConnection(localPort, inet_addr(ADDR_TO_BIND));
 
-    const auto tcbIt = tcbMap.find(localConnection.getTCBKey());
+    const auto tcbIt = tcbMap.find(localConnection->getTCBKey());
 
     if (tcbIt == tcbMap.end()) {
         //TCB doesn't exist (i.e., CLOSED STATE)
@@ -59,7 +59,7 @@ LocalConnection SimpleTCP::open(const unsigned localPort, bool passive, unsigned
         sockaddr_in sockstr {};
         sockstr.sin_addr.s_addr = inet_addr(ADDR_TO_BIND);
         sockstr.sin_family = AF_INET;
-        sockstr.sin_port = localConnection.localPort;
+        sockstr.sin_port = localConnection->localPort;
         constexpr auto sockstr_size = static_cast<socklen_t>(sizeof(sockstr));
 
         const auto iResult = bind(listenSocket, reinterpret_cast<sockaddr *>(&sockstr), sockstr_size);
@@ -68,12 +68,12 @@ LocalConnection SimpleTCP::open(const unsigned localPort, bool passive, unsigned
         }
 
         auto *tcb = new TransmissionControlBlock(localConnection, passive, timeout, listenSocket);
-        tcbMap[localConnection.getTCBKey()] = tcb;
+        tcbMap[localConnection->getTCBKey()] = tcb;
 
         if (passive) {
             tcb->state = LISTEN;
             tcb->start();
-            return localConnection;
+            return *localConnection;
         } else {
             //TODO
         }
@@ -99,7 +99,7 @@ LocalConnection SimpleTCP::open(const unsigned localPort, bool passive, unsigned
          */
     }
 
-    return localConnection;
+    return *localConnection;
 }
 
 void SimpleTCP::send(

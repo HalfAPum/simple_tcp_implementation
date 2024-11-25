@@ -6,6 +6,7 @@
 #define TCPHEADER_H
 #include <cstdint>
 
+#include "../LocalConnection.h"
 
 struct TCPHeader {
     uint16_t sourcePort;
@@ -13,7 +14,7 @@ struct TCPHeader {
     uint32_t sequenceNumber;
     uint32_t ackNumber;
     uint8_t dataOffset;
-    uint8_t reversed;
+    uint8_t reserved;
     bool URG;
     bool ACK;
     bool PSH;
@@ -23,9 +24,16 @@ struct TCPHeader {
     uint16_t windowSize;
     uint16_t checksum;
     uint16_t urgentPointer;
-    uint16_t segmentSize;
+
+    //Options
+    uint16_t maxSegmentSizeOption;
+    //Send-only options
+    unsigned noOptionCountOption;
+    bool endOfOptionListOption;
 
     static TCPHeader parseTCPHeader(const char* recvbuf);
+
+    void fillSendBuffer(char* sendbuff, LocalConnection* localConnection);
 };
 
 

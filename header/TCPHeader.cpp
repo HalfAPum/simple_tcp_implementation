@@ -33,11 +33,11 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
     header.dataOffset = ByteExtractor::get4BitInt(recvbuf + 12, true);
     std::cout << "Data offset: " << static_cast<int>(header.dataOffset) << std::endl;
 
-    //Reversed (6 bits)
+    //Reserved (6 bits)
     //Get 4 bits left from [recvbuf + 12] and concatenate them with 2 bits from next byte.
-    header.reversed = (ByteExtractor::get4BitInt(recvbuf + 12, false) << 2)
+    header.reserved = (ByteExtractor::get4BitInt(recvbuf + 12, false) << 2)
             | recvbuf[13] >> 6;
-    std::cout << "Reversed: " << static_cast<int>(header.reversed) << std::endl;
+    std::cout << "Reserved: " << static_cast<int>(header.reserved) << std::endl;
 
     //Flags (6 bits)
     const char* flagsByte = recvbuf + 13;
@@ -74,8 +74,8 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
 
     //Options (variable length)
     //Iterate over options until data starts
-    //Default initialize segmentSize to max
-    header.segmentSize = 0xFFFF;
+    //Default initialize Max Segment Size to max value
+    header.maxSegmentSizeOption = 0xFFFF;
 
     std::cout << "Options: ";
     for (int optionIndex = 20; optionIndex < header.dataOffset;) {
@@ -96,8 +96,8 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
 
         //Maximum Segment Size
         if (kind == 0x02) {
-            header.segmentSize = ByteExtractor::get16BitInt(recvbuf + (optionIndex + 2));
-            std::cout << "Maximum Segment Size: " + std::to_string(header.segmentSize) + ", ";
+            header.maxSegmentSizeOption = ByteExtractor::get16BitInt(recvbuf + (optionIndex + 2));
+            std::cout << "Maximum Segment Size: " + std::to_string(header.maxSegmentSizeOption) + ", ";
             optionIndex += 4;
             continue;
         }
@@ -111,4 +111,8 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
     std::cout << std::endl;
 
     return header;
+}
+
+void TCPHeader::fillSendBuffer(char *sendbuff, LocalConnection *localConnection) {
+
 }

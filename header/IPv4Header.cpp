@@ -79,3 +79,7 @@ IPv4Header IPv4Header::parseIPv4Header(const char* recvbuf) {
 
     return ipv4Header;
 }
+
+void IPv4Header::fillSendBuffer(char *sendbuf) {
+
+}

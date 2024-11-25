@@ -10,6 +10,8 @@
 struct LocalConnection {
     const unsigned long bindAddress;
     const unsigned localPort;
+    uint32_t foreignAddress = 0;
+    uint16_t foreignPort = 0;
     //<local socket, foreign socket>
 
     LocalConnection(
