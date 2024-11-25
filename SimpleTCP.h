@@ -4,12 +4,19 @@
 
 #ifndef SIMPLETCP_H
 #define SIMPLETCP_H
+#include <string>
+#include <unordered_map>
+
 #include "LocalConnection.h"
 #include "ReceiveParams.h"
+#include "TransmissionControlBlock.h"
 
 constexpr unsigned DEFAULT_TIMEOUT = 5 * 60 * 1000;
 
-struct SimpleTCP {
+class SimpleTCP {
+    std::unordered_map<std::string, TransmissionControlBlock*> tcbMap;
+public:
+    bool initialize();
 
     LocalConnection open(
         unsigned localPort,
@@ -32,7 +39,7 @@ struct SimpleTCP {
         the TCP will queue those it cannot service immediately.
      */
     void send(
-        LocalConnection localConnection,
+        const LocalConnection &localConnection,
         const char* buffer,
         unsigned byteCount,
         bool PSH,
@@ -52,14 +59,14 @@ struct SimpleTCP {
          filled.
     */
     ReceiveParams receive(
-        LocalConnection localConnection,
+        LocalConnection &localConnection,
         char* buffer,
         unsigned byteCount
     );
 
-    void close(LocalConnection localConnection);
+    void close(const LocalConnection &localConnection);
 
-    void abort(LocalConnection localConnection);
+    void abort(const LocalConnection &localConnection);
 
 };
 
