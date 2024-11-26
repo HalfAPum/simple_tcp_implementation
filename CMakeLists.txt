@@ -16,7 +16,9 @@ add_executable(simple_tcp_implementation main.cpp
         TransmissionControlBlock.h
         TransmissionControlBlock.cpp
         LocalConnection.h
-        ReceiveParams.h)
+        ReceiveParams.h
+        ByteInserter.h
+        ByteInserter.cpp)
 
 if(WIN32)
     target_link_libraries(simple_tcp_implementation wsock32 ws2_32)

@@ -51,7 +51,6 @@ class TransmissionControlBlock {
 
     std::thread thread;
 
-    IPv4Header constructSendIPv4Header(const IPv4Header &rIPv4Header, const TCPHeader &rTCPHeader);
     TCPHeader constructSendTCPHeader(const IPv4Header &rIPv4Header, const TCPHeader &rTCPHeader);
 
     void processSegment(const IPv4Header &receiveIPv4Header, const TCPHeader &receiveTCPHeader);

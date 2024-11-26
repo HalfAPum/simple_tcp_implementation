@@ -5,6 +5,7 @@
 #ifndef LOCALCONNECTION_H
 #define LOCALCONNECTION_H
 
+#include <cstdint>
 #include <string>
 
 struct LocalConnection {

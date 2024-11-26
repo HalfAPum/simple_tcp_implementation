@@ -7,7 +7,7 @@
 #include <cstdint>
 
 constexpr auto IPv4_Version = 4;
-constexpr auto IPv4_HEADER_LENGTH = 20;
+constexpr auto IPv4_HEADER_LENGTH = 5;
 constexpr auto IPv4_TTL = 60;
 constexpr auto IPv4_TCP_PROTOCOL = 6;
 
@@ -29,7 +29,9 @@ struct IPv4Header {
 
     static IPv4Header parseIPv4Header(const char* recvbuf);
 
-    void fillSendBuffer(char* sendbuf);
+    void fillSendBuffer(char* sendbuf) const;
+
+    IPv4Header constructSendIPv4Header() const;
 };
 
 #endif //IPV4HEADER_H

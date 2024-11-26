@@ -23,9 +23,6 @@ constexpr int TCP_SEGMENT_MIN_LENGTH = IP_HEADER_LENGTH + TCP_HEADER_MIN_LENGTH;
 constexpr int SEND_TCP_HEADER_LENGTH = 28;
 constexpr int SEND_EMPTY_TCP_SEGMENT_LENGTH = IP_HEADER_LENGTH + SEND_TCP_HEADER_LENGTH;
 
-//Static uniqie value for each IP header
-static std::atomic<uint64_t> ipv4Identification = 1;
-
 bool checkResultFail1(const bool result, const std::string &actionName, const SOCKET socket) {
     if (!result) return false;
 
@@ -54,37 +51,6 @@ void printMessage(char buffer[BUFFLEN], const int size) {
     }
     std::cout << std::endl;
     printf("\n");
-}
-
-IPv4Header TransmissionControlBlock::constructSendIPv4Header(const IPv4Header &rIPv4Header, const TCPHeader &rTCPHeader) {
-    IPv4Header sIPv4Header {};
-
-    sIPv4Header.version = IPv4_Version;
-    //We send IP header with no Options. Hence length is constant.
-    sIPv4Header.headerLength = IPv4_HEADER_LENGTH;
-    sIPv4Header.typeOfService = 0;
-
-    //Total length cannot be calculated yet.
-    //Calculate it when assembling packet.
-    //uint16_t totalLength;
-
-    sIPv4Header.identification = ipv4Identification.load();
-    ++ipv4Identification;
-
-    sIPv4Header.reserved = false;
-    sIPv4Header.dontFragment = true;
-    sIPv4Header.moreFragments = false;
-    //We don't put any optional so offset is 0.
-    sIPv4Header.fragmentOffset = 0;
-    sIPv4Header.timeToLive = IPv4_TTL;
-    sIPv4Header.protocol = IPv4_TCP_PROTOCOL;
-    //For simplicity send 0 checksum.
-    //Although you just need to calculate it after assembling the segment.
-    sIPv4Header.headerChecksum = 0;
-    sIPv4Header.sourceIPAddress = rIPv4Header.destinationIPAddress;
-    sIPv4Header.destinationIPAddress = rIPv4Header.sourceIPAddress;
-
-    return sIPv4Header;
 }
 
 TCPHeader TransmissionControlBlock::constructSendTCPHeader(const IPv4Header &rIPv4Header, const TCPHeader &rTCPHeader) {
@@ -133,11 +99,13 @@ TCPHeader TransmissionControlBlock::constructSendTCPHeader(const IPv4Header &rIP
     //Data offset represents offset in bits.
     //Decrement 1 since dataOffset indicates end of header (indexing starts from 0).
     sTCPHeader.dataOffset = SEND_TCP_HEADER_LENGTH * 8 - 1;
+
+    return sTCPHeader;
 }
 
 
 void TransmissionControlBlock::processSegment(const IPv4Header &receiveIPv4Header, const TCPHeader &receiveTCPHeader) {
-    IPv4Header sendIPv4Header = constructSendIPv4Header(receiveIPv4Header, receiveTCPHeader);
+    IPv4Header sendIPv4Header = receiveIPv4Header.constructSendIPv4Header();
     TCPHeader sendTCPHeader = constructSendTCPHeader(receiveIPv4Header, receiveTCPHeader);
 
     if (state == LISTEN) {
@@ -227,4 +195,7 @@ void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader
 
     sIPv4Header.fillSendBuffer(sendbuf);
     sTCPHeader.fillSendBuffer(sendbuf + IP_HEADER_LENGTH, localConnection);
+
+    //DEGUB Verify headers
+    IPv4Header::parseIPv4Header(sendbuf);
 }

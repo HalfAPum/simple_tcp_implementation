@@ -4,9 +4,11 @@
 
 #include "IPv4Header.h"
 
+#include <atomic>
 #include <iostream>
 
 #include "../ByteExtractor.h"
+#include "../ByteInserter.h"
 
 IPv4Header IPv4Header::parseIPv4Header(const char* recvbuf) {
     IPv4Header ipv4Header {};
@@ -80,6 +82,57 @@ IPv4Header IPv4Header::parseIPv4Header(const char* recvbuf) {
     return ipv4Header;
 }
 
-void IPv4Header::fillSendBuffer(char *sendbuf) {
+//Static uniqie value for each IP header
+static std::atomic<uint64_t> ipv4Identification = 1;
 
+IPv4Header IPv4Header::constructSendIPv4Header() const {
+    IPv4Header sIPv4Header {};
+
+    sIPv4Header.version = IPv4_Version;
+    //We send IP header with no Options. Hence length is constant.
+    sIPv4Header.headerLength = IPv4_HEADER_LENGTH;
+    sIPv4Header.typeOfService = 0;
+
+    //Total length cannot be calculated yet.
+    //Calculate it when assembling packet.
+    //uint16_t totalLength;
+
+    sIPv4Header.identification = ipv4Identification.load();
+    ++ipv4Identification;
+
+    sIPv4Header.reserved = false;
+    sIPv4Header.dontFragment = true;
+    sIPv4Header.moreFragments = false;
+    //We don't put any optional so offset is 0.
+    sIPv4Header.fragmentOffset = 0;
+    sIPv4Header.timeToLive = IPv4_TTL;
+    sIPv4Header.protocol = IPv4_TCP_PROTOCOL;
+    //For simplicity send 0 checksum.
+    //Although you just need to calculate it after assembling the segment.
+    sIPv4Header.headerChecksum = 0;
+    sIPv4Header.sourceIPAddress = destinationIPAddress;
+    sIPv4Header.destinationIPAddress = sourceIPAddress;
+
+    return sIPv4Header;
+}
+
+void IPv4Header::fillSendBuffer(char *sendbuf) const {
+    //Combine version and headerLength into single byte
+    ByteInserter::insert8BitInt(sendbuf, version << 4 | headerLength);
+    ByteInserter::insert8BitInt(sendbuf + 1, typeOfService);
+
+    //TODO add data size to total length later
+    //Use hardcoded 48 (20 for IP header and 28 for TCP header)
+    ByteInserter::insert16BitInt(sendbuf + 2, 48);
+    ByteInserter::insert16BitInt(sendbuf + 4, identification);
+
+    const uint8_t flags = reserved << 7 | dontFragment << 6 | moreFragments << 5;
+    ByteInserter::insert8BitInt(sendbuf + 6, flags | fragmentOffset >> 8);
+    ByteInserter::insert8BitInt(sendbuf + 7, fragmentOffset);
+    ByteInserter::insert8BitInt(sendbuf + 8, timeToLive);
+    ByteInserter::insert8BitInt(sendbuf + 9, protocol);
+    //For now don't calculate. If required, then do calculations here.
+    ByteInserter::insert8BitInt(sendbuf + 10, headerChecksum);
+    ByteInserter::insert32BitInt(sendbuf + 12, sourceIPAddress);
+    ByteInserter::insert32BitInt(sendbuf + 16, destinationIPAddress);
 }
