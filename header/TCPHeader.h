@@ -8,6 +8,15 @@
 
 #include "../LocalConnection.h"
 
+constexpr int SEND_TCP_HEADER_LENGTH = 28;
+
+//Options
+constexpr int END_OF_OPTION_LIST_OPTION_KIND = 0x00;
+constexpr int NO_OPTION_KIND = 0x01;
+constexpr int MAX_SEGMENT_SIZE_OPTION_KIND = 0x02;
+
+constexpr int MAX_SEGMENT_SIZE_OPTION_LENGTH = 0x04;
+
 struct TCPHeader {
     uint16_t sourcePort;
     uint16_t destinationPort;
@@ -27,13 +36,12 @@ struct TCPHeader {
 
     //Options
     uint16_t maxSegmentSizeOption;
-    //Send-only options
-    unsigned noOptionCountOption;
-    bool endOfOptionListOption;
 
     static TCPHeader parseTCPHeader(const char* recvbuf);
 
-    void fillSendBuffer(char* sendbuff, LocalConnection* localConnection);
+    TCPHeader constructSendTCPHeader(uint16_t localPort) const;
+
+    void fillSendBuffer(char* sendbuff) const;
 };
 
 

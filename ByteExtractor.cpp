@@ -32,7 +32,7 @@ bool ByteExtractor::getBit(const char *recvbuf, const unsigned index) {
  */
 uint8_t ByteExtractor::get4BitInt(const char *recvbuf, const bool readLeadingBits) {
     if (readLeadingBits) {
-        return recvbuf[0] >> 4;
+        return recvbuf[0] >> 4 & 0x0F;
     }
 
     return recvbuf[0] & 0x0F;

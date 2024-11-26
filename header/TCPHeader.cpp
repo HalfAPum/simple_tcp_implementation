@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "../ByteExtractor.h"
+#include "../ByteInserter.h"
 
 TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
     TCPHeader header {};
@@ -29,8 +30,9 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
     header.ackNumber = ByteExtractor::get32BitInt(recvbuf + 8);
     std::cout << "Acknowledgment number: " << header.ackNumber << std::endl;
 
-    //Data Offset (4 bits)
-    header.dataOffset = ByteExtractor::get4BitInt(recvbuf + 12, true);
+    //Data Offset (4 bits).
+    //Data offset is represented in window (window = 1/4 of byte).
+    header.dataOffset = ByteExtractor::get4BitInt(recvbuf + 12, true) * 4;
     std::cout << "Data offset: " << static_cast<int>(header.dataOffset) << std::endl;
 
     //Reserved (6 bits)
@@ -82,20 +84,21 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
         const uint8_t kind = recvbuf[optionIndex];
 
         //End of Options List
-        if (kind == 0x00) {
+        if (kind == END_OF_OPTION_LIST_OPTION_KIND) {
             std::cout << "End of Options.";
             break;
         }
 
         //No-Operation
-        if (kind == 0x01) {
+        if (kind == NO_OPTION_KIND) {
             std::cout << "No-Operation, ";
             ++optionIndex;
             continue;
         }
 
         //Maximum Segment Size
-        if (kind == 0x02) {
+        if (kind == MAX_SEGMENT_SIZE_OPTION_KIND) {
+            //To ignore kind and length add 2 to option index
             header.maxSegmentSizeOption = ByteExtractor::get16BitInt(recvbuf + (optionIndex + 2));
             std::cout << "Maximum Segment Size: " + std::to_string(header.maxSegmentSizeOption) + ", ";
             optionIndex += 4;
@@ -113,6 +116,71 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
     return header;
 }
 
-void TCPHeader::fillSendBuffer(char *sendbuff, LocalConnection *localConnection) {
+TCPHeader TCPHeader::constructSendTCPHeader(const uint16_t localPort) const {
+    TCPHeader sTCPHeader {};
 
+    sTCPHeader.sourcePort = localPort;
+    sTCPHeader.destinationPort = sourcePort;
+
+    //No SEQ number for empty header.
+    sTCPHeader.sequenceNumber = 0;
+    //No ACK Number for empty header.
+    sTCPHeader.ackNumber = 0;
+
+    sTCPHeader.reserved = 0;
+    sTCPHeader.URG = false;
+    sTCPHeader.ACK = false;
+    sTCPHeader.PSH = false;
+    sTCPHeader.RST = false;
+    sTCPHeader.SYN = false;
+    sTCPHeader.FIN = false;
+
+    //Set max window size we are ready to accept.
+    sTCPHeader.windowSize = 0xFFFF;
+
+    //Calculate checksum before sending segment.
+    // uint16_t checksum;
+
+    //No URG pointer for empty header.
+    sTCPHeader.urgentPointer = 0;
+
+    //Set Max Segment Size.
+    sTCPHeader.maxSegmentSizeOption = 0xFFFF;
+
+    //Data offset represents offset in "word" one word is 1/4 of byte.
+    sTCPHeader.dataOffset = SEND_TCP_HEADER_LENGTH / 4;
+
+    return sTCPHeader;
+}
+
+void TCPHeader::fillSendBuffer(char *sendbuff) const {
+    ByteInserter::insert16BitInt(sendbuff, sourcePort);
+    ByteInserter::insert16BitInt(sendbuff + 2, destinationPort);
+    ByteInserter::insert32BitInt(sendbuff + 4, sequenceNumber);
+    ByteInserter::insert32BitInt(sendbuff + 8, ackNumber);
+    ByteInserter::insert8BitInt(sendbuff + 12, dataOffset << 4 | reserved >> 2);
+    const uint8_t flags = URG << 5 | ACK << 4 | PSH << 3 | RST << 2 | SYN << 1 | FIN;
+    ByteInserter::insert8BitInt(sendbuff + 13, reserved << 6 | flags);
+    ByteInserter::insert16BitInt(sendbuff + 14, windowSize);
+    //Insert 0 checksum. After headers and text are filled, calculate checksum and insert it.
+    ByteInserter::insert16BitInt(sendbuff + 16, 0);
+    ByteInserter::insert16BitInt(sendbuff + 18, urgentPointer);
+
+    /*
+     * Data offset is equal to TCP header size + options.
+     * Options we send are Maximum Segment Size, No-Option, End of Option List.
+     * TCP header must occupy bytes count multiples of 4 e.g. 20, 24, 28...
+     * Max Segment Size Option occupy 4 bytes.
+     * Options must end with End of Option List Option which occupies 1 byte.
+     * Add 3 additional No-Option Options (1 byte each) to make TCP header fit bytes count multiples of 4 rule.
+     * Total byte count is 28 bytes.
+     *
+     */
+    ByteInserter::insert8BitInt(sendbuff + 20, MAX_SEGMENT_SIZE_OPTION_KIND);
+    ByteInserter::insert8BitInt(sendbuff + 21, MAX_SEGMENT_SIZE_OPTION_LENGTH);
+    ByteInserter::insert16BitInt(sendbuff + 22, maxSegmentSizeOption);
+    ByteInserter::insert8BitInt(sendbuff + 24, NO_OPTION_KIND);
+    ByteInserter::insert8BitInt(sendbuff + 25, NO_OPTION_KIND);
+    ByteInserter::insert8BitInt(sendbuff + 26, NO_OPTION_KIND);
+    ByteInserter::insert8BitInt(sendbuff + 27, END_OF_OPTION_LIST_OPTION_KIND);
 }

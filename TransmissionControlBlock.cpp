@@ -20,7 +20,6 @@ constexpr int IP_HEADER_LENGTH = 20;
 constexpr int TCP_HEADER_MIN_LENGTH = 20;
 constexpr int TCP_SEGMENT_MIN_LENGTH = IP_HEADER_LENGTH + TCP_HEADER_MIN_LENGTH;
 
-constexpr int SEND_TCP_HEADER_LENGTH = 28;
 constexpr int SEND_EMPTY_TCP_SEGMENT_LENGTH = IP_HEADER_LENGTH + SEND_TCP_HEADER_LENGTH;
 
 bool checkResultFail1(const bool result, const std::string &actionName, const SOCKET socket) {
@@ -53,60 +52,10 @@ void printMessage(char buffer[BUFFLEN], const int size) {
     printf("\n");
 }
 
-TCPHeader TransmissionControlBlock::constructSendTCPHeader(const IPv4Header &rIPv4Header, const TCPHeader &rTCPHeader) {
-    TCPHeader sTCPHeader {};
-
-    sTCPHeader.sourcePort = localConnection->localPort;
-    sTCPHeader.destinationPort = rTCPHeader.sourcePort;
-
-    //No SEQ number for empty header.
-    // uint32_t sequenceNumber;
-    //No ACK Number for empty header.
-    // uint32_t ackNumber;
-
-    sTCPHeader.reserved = 0;
-    sTCPHeader.URG = false;
-    sTCPHeader.ACK = false;
-    sTCPHeader.PSH = false;
-    sTCPHeader.RST = false;
-    sTCPHeader.SYN = false;
-    sTCPHeader.FIN = false;
-
-    //Set max window size we are ready to accept.
-    sTCPHeader.windowSize = std::numeric_limits<uint16_t>::max();
-
-    //Calculate checksum before sending segment.
-    // uint16_t checksum;
-
-    //No URG pointer for empty header.
-    // uint16_t urgentPointer;
-
-    //Set Max Segment Size.
-    sTCPHeader.maxSegmentSizeOption = 0xFFFF;
-
-    /*
-     * Data offset is equal to TCP header size + options.
-     * Options we send are Maximum Segment Size, No-Option, End of Option List.
-     * TCP header must occupy bytes count multiples of 4 e.g. 20, 24, 28...
-     * Max Segment Size Optin occupy 4 bytes.
-     * Options must end with End of Option List Option which occupies 1 byte.
-     * Add 3 additional No-Option Options (1 byte each) to make TCP header fit bytes count multiples of 4 rule.
-     * Total byte count is 28 bytes.
-     */
-    sTCPHeader.noOptionCountOption = 3;
-    sTCPHeader.endOfOptionListOption = true;
-
-    //Data offset represents offset in bits.
-    //Decrement 1 since dataOffset indicates end of header (indexing starts from 0).
-    sTCPHeader.dataOffset = SEND_TCP_HEADER_LENGTH * 8 - 1;
-
-    return sTCPHeader;
-}
-
 
 void TransmissionControlBlock::processSegment(const IPv4Header &receiveIPv4Header, const TCPHeader &receiveTCPHeader) {
     IPv4Header sendIPv4Header = receiveIPv4Header.constructSendIPv4Header();
-    TCPHeader sendTCPHeader = constructSendTCPHeader(receiveIPv4Header, receiveTCPHeader);
+    TCPHeader sendTCPHeader = receiveTCPHeader.constructSendTCPHeader(localConnection->localPort);
 
     if (state == LISTEN) {
         if (receiveTCPHeader.RST) {
@@ -194,8 +143,9 @@ void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader
     char sendbuf[SEND_EMPTY_TCP_SEGMENT_LENGTH];
 
     sIPv4Header.fillSendBuffer(sendbuf);
-    sTCPHeader.fillSendBuffer(sendbuf + IP_HEADER_LENGTH, localConnection);
+    sTCPHeader.fillSendBuffer(sendbuf + IP_HEADER_LENGTH);
 
     //DEGUB Verify headers
     IPv4Header::parseIPv4Header(sendbuf);
+    TCPHeader::parseTCPHeader(sendbuf + IP_HEADER_LENGTH);
 }

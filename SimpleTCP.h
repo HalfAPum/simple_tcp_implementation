@@ -19,7 +19,7 @@ public:
     bool initialize();
 
     LocalConnection open(
-        unsigned localPort,
+        uint16_t localPort,
         /* foreign socket, */
         bool passive,
         unsigned timeout = DEFAULT_TIMEOUT

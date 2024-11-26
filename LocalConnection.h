@@ -6,18 +6,19 @@
 #define LOCALCONNECTION_H
 
 #include <cstdint>
+#include <iostream>
 #include <string>
 
 struct LocalConnection {
-    const unsigned long bindAddress;
-    const unsigned localPort;
+    const uint32_t bindAddress;
+    const uint16_t localPort;
     uint32_t foreignAddress = 0;
     uint16_t foreignPort = 0;
     //<local socket, foreign socket>
 
     LocalConnection(
-        const unsigned long _bindAddress,
-        const unsigned _localPort
+        const uint32_t _bindAddress,
+        const uint16_t _localPort
     ) : bindAddress(_bindAddress),
         localPort(_localPort)
         {}
