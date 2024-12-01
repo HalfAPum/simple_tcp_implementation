@@ -9,9 +9,9 @@
 
 class ByteInserter {
 public:
-    static void insert8BitInt(char* sendbuf, uint8_t bits);
-    static void insert16BitInt(char* sendbuf, uint16_t bits);
-    static void insert32BitInt(char* sendbuf, uint32_t bits);
+    static void insert8BitInt(unsigned char* sendbuf, uint8_t bits);
+    static void insert16BitInt(unsigned char* sendbuf, uint16_t bits);
+    static void insert32BitInt(unsigned char* sendbuf, uint32_t bits);
 };
 
 

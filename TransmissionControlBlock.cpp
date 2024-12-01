@@ -99,10 +99,9 @@ void TransmissionControlBlock::processSegment(const IPv4Header &receiveIPv4Heade
 }
 
 void TransmissionControlBlock::run() {
-    char recvbuf[BUFFLEN];
-    int recvbuflen = BUFFLEN;
+    unsigned char recvbuf[BUFFLEN];
 
-    const int recvResult = recv(socket, recvbuf, recvbuflen, 0);
+    const int recvResult = recv(socket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
 
     if (checkResultFail1(recvResult == RECV_ERROR, "recvResult", socket)) {
         return;
@@ -140,7 +139,7 @@ uint32_t TransmissionControlBlock::generateISS() {
 
 void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader &sTCPHeader) {
     //Todo temp
-    char sendbuf[SEND_EMPTY_TCP_SEGMENT_LENGTH];
+    unsigned char sendbuf[SEND_EMPTY_TCP_SEGMENT_LENGTH];
 
     sIPv4Header.fillSendBuffer(sendbuf);
     sTCPHeader.fillSendBuffer(sendbuf + IP_HEADER_LENGTH);

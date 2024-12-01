@@ -10,7 +10,7 @@
 #include "../ByteExtractor.h"
 #include "../ByteInserter.h"
 
-IPv4Header IPv4Header::parseIPv4Header(const char* recvbuf) {
+IPv4Header IPv4Header::parseIPv4Header(const unsigned char* recvbuf) {
     IPv4Header ipv4Header {};
 
     //Each char is a byte (1 byte = 8 bits)
@@ -38,7 +38,7 @@ IPv4Header IPv4Header::parseIPv4Header(const char* recvbuf) {
     std::cout << "Identification: " << static_cast<int>(ipv4Header.identification) << std::endl;
 
     //Flags (3 bits)
-    const char* flagsByte = recvbuf + 6;
+    const unsigned char* flagsByte = recvbuf + 6;
     //  Reserved (1 bit)
     ipv4Header.reserved = ByteExtractor::getBit(flagsByte, 0);
     std::cout << "Reserved: " << ipv4Header.reserved << std::endl;
@@ -116,7 +116,7 @@ IPv4Header IPv4Header::constructSendIPv4Header() const {
     return sIPv4Header;
 }
 
-void IPv4Header::fillSendBuffer(char *sendbuf) const {
+void IPv4Header::fillSendBuffer(unsigned char *sendbuf) const {
     //Combine version and headerLength into single byte
     ByteInserter::insert8BitInt(sendbuf, version << 4 | headerLength);
     ByteInserter::insert8BitInt(sendbuf + 1, typeOfService);

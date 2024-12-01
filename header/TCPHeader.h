@@ -37,13 +37,13 @@ struct TCPHeader {
     //Options
     uint16_t maxSegmentSizeOption;
 
-    static TCPHeader parseTCPHeader(const char* recvbuf);
+    static TCPHeader parseTCPHeader(const unsigned char* recvbuf);
 
-    TCPHeader constructSendTCPHeader(uint16_t localPort) const;
+    [[nodiscard]] TCPHeader constructSendTCPHeader(uint16_t localPort) const;
 
-    void fillSendBuffer(char* sendbuff) const;
+    void fillSendBuffer(unsigned char* sendbuff) const;
 
-    void calculateChecksum(const IPv4Header &ipv4Header, char* sendbuf);
+    void calculateChecksum(const IPv4Header &ipv4Header, unsigned char* sendbuf);
 };
 
 

@@ -27,11 +27,11 @@ struct IPv4Header {
     uint32_t sourceIPAddress;
     uint32_t destinationIPAddress;
 
-    static IPv4Header parseIPv4Header(const char* recvbuf);
+    static IPv4Header parseIPv4Header(const unsigned char* recvbuf);
 
-    void fillSendBuffer(char* sendbuf) const;
+    void fillSendBuffer(unsigned char* sendbuf) const;
 
-    IPv4Header constructSendIPv4Header() const;
+    [[nodiscard]] IPv4Header constructSendIPv4Header() const;
 };
 
 #endif //IPV4HEADER_H

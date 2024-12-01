@@ -10,7 +10,7 @@
 #include "../ByteExtractor.h"
 #include "../ByteInserter.h"
 
-TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
+TCPHeader TCPHeader::parseTCPHeader(const unsigned char* recvbuf) {
     TCPHeader header {};
 
     std::cout << "Parse TCP Header" << std::endl;
@@ -43,7 +43,7 @@ TCPHeader TCPHeader::parseTCPHeader(const char* recvbuf) {
     std::cout << "Reserved: " << static_cast<int>(header.reserved) << std::endl;
 
     //Flags (6 bits)
-    const char* flagsByte = recvbuf + 13;
+    const unsigned char* flagsByte = recvbuf + 13;
     //Urgent Pointer field significant
     header.URG = ByteExtractor::getBit(flagsByte, 2);
     std::cout << "URG: " << header.URG << std::endl;
@@ -154,7 +154,7 @@ TCPHeader TCPHeader::constructSendTCPHeader(const uint16_t localPort) const {
     return sTCPHeader;
 }
 
-void TCPHeader::fillSendBuffer(char *sendbuff) const {
+void TCPHeader::fillSendBuffer(unsigned char*sendbuff) const {
     ByteInserter::insert16BitInt(sendbuff, sourcePort);
     ByteInserter::insert16BitInt(sendbuff + 2, destinationPort);
     ByteInserter::insert32BitInt(sendbuff + 4, sequenceNumber);
@@ -186,7 +186,7 @@ void TCPHeader::fillSendBuffer(char *sendbuff) const {
     ByteInserter::insert8BitInt(sendbuff + 27, END_OF_OPTION_LIST_OPTION_KIND);
 }
 
-void TCPHeader::calculateChecksum(const IPv4Header &ipv4Header, char* sendbuf) {
+void TCPHeader::calculateChecksum(const IPv4Header &ipv4Header, unsigned char* sendbuf) {
     uint32_t sum = 0;
 
     //Add pseudo header first.
@@ -195,8 +195,6 @@ void TCPHeader::calculateChecksum(const IPv4Header &ipv4Header, char* sendbuf) {
     sum += ipv4Header.destinationIPAddress >> 16 & 0xFFFF;
     sum += ipv4Header.destinationIPAddress & 0xFFFF;
     sum += IPv4_TCP_PROTOCOL & 0xFFFF;
-    std::cout << "PROTOCOL AND " << (int)(IPv4_TCP_PROTOCOL & 0xFFFF) << std::endl;
-    std::cout << "PROTOCOL HTONS " << (int)htons(IPv4_TCP_PROTOCOL) << std::endl;
     //TODO UPDATE WHEN SEND DATA
     sum += SEND_TCP_HEADER_LENGTH & 0xFFFF;
 
