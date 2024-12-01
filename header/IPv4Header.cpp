@@ -132,7 +132,7 @@ void IPv4Header::fillSendBuffer(char *sendbuf) const {
     ByteInserter::insert8BitInt(sendbuf + 8, timeToLive);
     ByteInserter::insert8BitInt(sendbuf + 9, protocol);
     //For now don't calculate. If required, then do calculations here.
-    ByteInserter::insert8BitInt(sendbuf + 10, headerChecksum);
+    ByteInserter::insert16BitInt(sendbuf + 10, headerChecksum);
     ByteInserter::insert32BitInt(sendbuf + 12, sourceIPAddress);
     ByteInserter::insert32BitInt(sendbuf + 16, destinationIPAddress);
 }

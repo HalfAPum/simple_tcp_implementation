@@ -145,7 +145,15 @@ void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader
     sIPv4Header.fillSendBuffer(sendbuf);
     sTCPHeader.fillSendBuffer(sendbuf + IP_HEADER_LENGTH);
 
+    std::cout << "----------------------------------------------------------------------------" << std::endl;
+    std::cout << "------------------------------------SEND-PACKET-----------------------------" << std::endl;
+
     //DEGUB Verify headers
     IPv4Header::parseIPv4Header(sendbuf);
+
+    //Calculate TCP checksum
+    sTCPHeader.calculateChecksum(sIPv4Header, sendbuf + IP_HEADER_LENGTH);
+
     TCPHeader::parseTCPHeader(sendbuf + IP_HEADER_LENGTH);
+
 }

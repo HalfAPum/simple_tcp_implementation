@@ -6,7 +6,7 @@
 #define TCPHEADER_H
 #include <cstdint>
 
-#include "../LocalConnection.h"
+#include "IPv4Header.h"
 
 constexpr int SEND_TCP_HEADER_LENGTH = 28;
 
@@ -42,6 +42,8 @@ struct TCPHeader {
     TCPHeader constructSendTCPHeader(uint16_t localPort) const;
 
     void fillSendBuffer(char* sendbuff) const;
+
+    void calculateChecksum(const IPv4Header &ipv4Header, char* sendbuf);
 };
 
 

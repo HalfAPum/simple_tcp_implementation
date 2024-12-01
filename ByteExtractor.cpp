@@ -4,6 +4,7 @@
 
 #include "ByteExtractor.h"
 
+#include <iostream>
 #include <stdexcept>
 
 
@@ -40,10 +41,15 @@ uint8_t ByteExtractor::get4BitInt(const char *recvbuf, const bool readLeadingBit
 
 //Uses 2 bytes from [recvbuf] pointer.
 uint16_t ByteExtractor::get16BitInt(const char *recvbuf) {
-    return (recvbuf[0] << 8) | recvbuf[1];
+    std::cout << "HEX OF 16 bit in next line are " << std::hex << (int)recvbuf[0] << "+" << std::hex << (int)recvbuf[1] << " || ";
+    std::cout << std::dec << (int)recvbuf[0] << "+" << std::dec << (int)recvbuf[1] << std::endl;
+
+    uint16_t experimental = (recvbuf[0] << 8) | recvbuf[1];
+    std::cout << "Experimental hex " << std::hex << (int)experimental << " || " << std::dec << (int)experimental << std::endl;
+    return recvbuf[0] << 8 | recvbuf[1];
 }
 
 //Uses 4 bytes from [recvbuf] pointer.
 uint32_t ByteExtractor::get32BitInt(const char *recvbuf) {
-    return (recvbuf[0] << 24) | (recvbuf[1] << 16) | (recvbuf[2] << 8) | recvbuf[3];
+    return recvbuf[0] << 24 | recvbuf[1] << 16 | recvbuf[2] << 8 | recvbuf[3];
 }

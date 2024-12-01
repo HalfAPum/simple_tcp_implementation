@@ -5,6 +5,7 @@
 #include "TCPHeader.h"
 
 #include <iostream>
+#include <winsock2.h>
 
 #include "../ByteExtractor.h"
 #include "../ByteInserter.h"
@@ -183,4 +184,37 @@ void TCPHeader::fillSendBuffer(char *sendbuff) const {
     ByteInserter::insert8BitInt(sendbuff + 25, NO_OPTION_KIND);
     ByteInserter::insert8BitInt(sendbuff + 26, NO_OPTION_KIND);
     ByteInserter::insert8BitInt(sendbuff + 27, END_OF_OPTION_LIST_OPTION_KIND);
+}
+
+void TCPHeader::calculateChecksum(const IPv4Header &ipv4Header, char* sendbuf) {
+    uint32_t sum = 0;
+
+    //Add pseudo header first.
+    sum += ipv4Header.sourceIPAddress >> 16 & 0xFFFF;
+    sum += ipv4Header.sourceIPAddress & 0xFFFF;
+    sum += ipv4Header.destinationIPAddress >> 16 & 0xFFFF;
+    sum += ipv4Header.destinationIPAddress & 0xFFFF;
+    sum += IPv4_TCP_PROTOCOL & 0xFFFF;
+    std::cout << "PROTOCOL AND " << (int)(IPv4_TCP_PROTOCOL & 0xFFFF) << std::endl;
+    std::cout << "PROTOCOL HTONS " << (int)htons(IPv4_TCP_PROTOCOL) << std::endl;
+    //TODO UPDATE WHEN SEND DATA
+    sum += SEND_TCP_HEADER_LENGTH & 0xFFFF;
+
+    //Add TCP header
+    //TODO consider for odd end.
+    //TODO add data to checksum
+    for (int i = 0; i < SEND_TCP_HEADER_LENGTH; i+=2) {
+        if (i+1 == SEND_TCP_HEADER_LENGTH) std::cout << "FUCK THIS IS A PROBLEM" << std::endl;
+        //TODO maybe & 0xFFFF is redundant?
+        sum += (sendbuf[i] << 8 | sendbuf[i + 1]) & 0xFFFF;
+    }
+
+    //Fold 32-bit sum to 16 bits.
+    sum = (sum & 0xFFFF) + (sum >> 16 & 0xFFFF);
+
+    //Perform complement.
+    sum = ~sum;
+
+    checksum = sum;
+    ByteInserter::insert16BitInt(sendbuf + 16, sum);
 }
