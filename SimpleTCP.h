@@ -22,6 +22,7 @@ public:
         uint16_t localPort,
         /* foreign socket, */
         bool passive,
+        uint16_t foreignPort = 0,
         unsigned timeout = DEFAULT_TIMEOUT
     );
 

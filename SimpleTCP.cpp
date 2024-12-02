@@ -35,7 +35,7 @@ bool checkResultFail(const bool result, const std::string &actionName, const SOC
     return true;
 }
 
-LocalConnection SimpleTCP::open(const uint16_t localPort, bool passive, unsigned timeout) {
+LocalConnection SimpleTCP::open(const uint16_t localPort, bool passive, const uint16_t foreignPort, unsigned timeout) {
     auto *localConnection = new LocalConnection(inet_addr(ADDR_TO_BIND), localPort);
 
     const auto tcbIt = tcbMap.find(localConnection->getTCBKey());

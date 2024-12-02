@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="passive_connection" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="true" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="simple_tcp_implementation" TARGET_NAME="simple_tcp_implementation" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="simple_tcp_implementation" RUN_TARGET_NAME="simple_tcp_implementation">
+    <envs>
+      <env name="LISTEN_PORT" value="8080" />
+      <env name="PASSIVE_CONNECTION" value="1" />
+    </envs>
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
