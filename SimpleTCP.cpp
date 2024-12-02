@@ -59,7 +59,7 @@ LocalConnection SimpleTCP::open(const uint16_t localPort, bool passive, unsigned
         sockaddr_in sockstr {};
         sockstr.sin_addr.s_addr = inet_addr(ADDR_TO_BIND);
         sockstr.sin_family = AF_INET;
-        sockstr.sin_port = localConnection->localPort;
+        sockstr.sin_port = htons(localConnection->localPort);
         constexpr auto sockstr_size = static_cast<socklen_t>(sizeof(sockstr));
 
         const auto iResult = bind(listenSocket, reinterpret_cast<sockaddr *>(&sockstr), sockstr_size);

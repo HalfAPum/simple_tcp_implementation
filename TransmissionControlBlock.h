@@ -62,7 +62,8 @@ public:
     LocalConnection *localConnection;
     bool passive;
     const unsigned timeout;
-    SOCKET socket;
+    SOCKET listenSocket;
+    SOCKET connectionSocket;
     State state = CLOSED;
 
     TransmissionControlBlock(
@@ -73,7 +74,8 @@ public:
     ) : localConnection(_localConnection),
         passive(_passive),
         timeout(_timeout),
-        socket(_socket)
+        listenSocket(_socket),
+        connectionSocket(0)
         {}
 
     ~TransmissionControlBlock() {
