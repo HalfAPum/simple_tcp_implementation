@@ -40,7 +40,7 @@ struct LocalConnection {
         auto *sockstr = new sockaddr_in();
         sockstr->sin_addr.s_addr = htonl(foreignAddress);
         sockstr->sin_family = AF_INET;
-        sockstr->sin_port = htons(foreignPort);
+        sockstr->sin_port = htons(8080);
 
         foreignSockaddrr = reinterpret_cast<sockaddr *>(sockstr);
         foreignSockaddrrLength = static_cast<socklen_t>(sizeof(*sockstr));

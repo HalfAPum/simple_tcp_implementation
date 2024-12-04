@@ -111,26 +111,33 @@ void TransmissionControlBlock::processSegment(const IPv4Header &receiveIPv4Heade
 void TransmissionControlBlock::run() {
     unsigned char recvbuf[BUFFLEN];
 
-    const int recvResult = recv(listenSocket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
+    do {
+        const int recvResult = recv(listenSocket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
 
-    if (checkResultFail1(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
-        return;
-    }
+        if (checkResultFail1(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
+            return;
+        }
 
-    //Verify received Result size.
-    //We should receive IP and TCP headers (each is at least 20 bytes long).
-    //Data payload is optional.
-    if (validate(recvResult < TCP_SEGMENT_MIN_LENGTH, listenSocket,
-        "Received message has size: " + std::to_string(recvResult) +
-        ". This is less than TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_MIN_LENGTH)
-    )) {
-        return;
-    }
+        //Verify received Result size.
+        //We should receive IP and TCP headers (each is at least 20 bytes long).
+        //Data payload is optional.
+        if (validate(recvResult < TCP_SEGMENT_MIN_LENGTH, listenSocket,
+            "Received message has size: " + std::to_string(recvResult) +
+            ". This is less than TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_MIN_LENGTH)
+        )) {
+            return;
+        }
 
-    auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
-    auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + IP_HEADER_LENGTH);
+        auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
+        auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + IP_HEADER_LENGTH);
 
-    processSegment(ipv4Header, tcpHeader);
+        if (tcpHeader.destinationPort != localConnection->localPort) {
+            std::cout << "Ignore unknown packet to " << tcpHeader.destinationPort << std::endl;
+            continue;
+        }
+
+        processSegment(ipv4Header, tcpHeader);
+    } while((localConnection->localPort == 8080));
 }
 
 void TransmissionControlBlock::start() {
@@ -151,6 +158,8 @@ void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader
     //Todo temp
     unsigned char sendbuf[SEND_EMPTY_TCP_SEGMENT_LENGTH];
 
+    sTCPHeader.destinationPort = 8080;
+
     sIPv4Header.fillSendBuffer(sendbuf);
     sTCPHeader.fillSendBuffer(sendbuf + IP_HEADER_LENGTH);
 
@@ -165,7 +174,7 @@ void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader
 
     TCPHeader::parseTCPHeader(sendbuf + IP_HEADER_LENGTH);
 
-    const int sendResult = send(connectionSocket, reinterpret_cast<char *>(sendbuf), SEND_EMPTY_TCP_SEGMENT_LENGTH, 0);
+    const int sendResult = send(connectionSocket, (char *)(sendbuf), SEND_EMPTY_TCP_SEGMENT_LENGTH, 0);
     checkResultFail1(sendResult == SOCKET_ERROR, "sendto", listenSocket);
 
     std::cout << "SUCCESS? " << sendResult << std::endl;
