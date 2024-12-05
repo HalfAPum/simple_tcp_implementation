@@ -7,9 +7,9 @@
 #include <string>
 #include <unordered_map>
 
-#include "LocalConnection.h"
+#include "tcb/LocalConnection.h"
 #include "ReceiveParams.h"
-#include "TransmissionControlBlock.h"
+#include "tcb/TransmissionControlBlock.h"
 
 constexpr unsigned DEFAULT_TIMEOUT = 5 * 60 * 1000;
 

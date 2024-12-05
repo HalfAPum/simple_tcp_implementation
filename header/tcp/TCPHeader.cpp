@@ -5,10 +5,9 @@
 #include "TCPHeader.h"
 
 #include <iostream>
-#include <winsock2.h>
 
-#include "../ByteExtractor.h"
-#include "../ByteInserter.h"
+#include "../../byteop/extract/ByteExtractor.h"
+#include "../../byteop/insert/ByteInserter.h"
 
 TCPHeader TCPHeader::parseTCPHeader(const unsigned char* recvbuf) {
     TCPHeader header {};

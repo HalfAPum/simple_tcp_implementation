@@ -9,8 +9,8 @@
 
 #include "LocalConnection.h"
 #include "State.h"
-#include "header/IPv4Header.h"
-#include "header/TCPHeader.h"
+#include "../header/ipv4/IPv4Header.h"
+#include "../header/tcp/TCPHeader.h"
 
 
 class TransmissionControlBlock {

@@ -11,9 +11,6 @@
 #include <random>
 #include <ws2tcpip.h>
 
-#include "header/IPv4Header.h"
-
-struct TCPHeader;
 constexpr unsigned BUFFLEN = 65535;
 constexpr auto RECV_ERROR = -1;
 
@@ -157,8 +154,6 @@ uint32_t TransmissionControlBlock::generateISS() {
 void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader &sTCPHeader) {
     //Todo temp
     unsigned char sendbuf[SEND_EMPTY_TCP_SEGMENT_LENGTH];
-
-    sTCPHeader.destinationPort = 8080;
 
     sIPv4Header.fillSendBuffer(sendbuf);
     sTCPHeader.fillSendBuffer(sendbuf + IP_HEADER_LENGTH);

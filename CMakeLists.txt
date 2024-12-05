@@ -4,21 +4,21 @@ project(simple_tcp_implementation)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(simple_tcp_implementation main.cpp
-        header/IPv4Header.h
-        header/IPv4Header.cpp
-        header/TCPHeader.h
-        header/TCPHeader.cpp
-        ByteExtractor.h
-        ByteExtractor.cpp
-        State.h
+        header/ipv4/IPv4Header.h
+        header/ipv4/IPv4Header.cpp
+        header/tcp/TCPHeader.h
+        header/tcp/TCPHeader.cpp
+        byteop/extract/ByteExtractor.h
+        byteop/extract/ByteExtractor.cpp
+        tcb/State.h
         SimpleTCP.h
         SimpleTCP.cpp
-        TransmissionControlBlock.h
-        TransmissionControlBlock.cpp
-        LocalConnection.h
+        tcb/TransmissionControlBlock.h
+        tcb/TransmissionControlBlock.cpp
+        tcb/LocalConnection.h
         ReceiveParams.h
-        ByteInserter.h
-        ByteInserter.cpp)
+        byteop/insert/ByteInserter.h
+        byteop/insert/ByteInserter.cpp)
 
 if(WIN32)
     target_link_libraries(simple_tcp_implementation wsock32 ws2_32)

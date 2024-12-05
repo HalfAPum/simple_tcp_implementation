@@ -6,7 +6,7 @@
 #define TCPHEADER_H
 #include <cstdint>
 
-#include "IPv4Header.h"
+#include "../ipv4/IPv4Header.h"
 
 constexpr int SEND_TCP_HEADER_LENGTH = 28;
 

@@ -7,8 +7,8 @@
 #include <atomic>
 #include <iostream>
 
-#include "../ByteExtractor.h"
-#include "../ByteInserter.h"
+#include "../../byteop/extract/ByteExtractor.h"
+#include "../../byteop/insert/ByteInserter.h"
 
 IPv4Header IPv4Header::parseIPv4Header(const unsigned char* recvbuf) {
     IPv4Header ipv4Header {};
