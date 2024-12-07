@@ -13,26 +13,12 @@
 
 #include "../Constants.h"
 
-constexpr int IP_HEADER_LENGTH = 20;
-constexpr int TCP_HEADER_MIN_LENGTH = 20;
-constexpr int TCP_SEGMENT_MIN_LENGTH = IP_HEADER_LENGTH + TCP_HEADER_MIN_LENGTH;
-
 constexpr int SEND_EMPTY_TCP_SEGMENT_LENGTH = IP_HEADER_LENGTH + SEND_TCP_HEADER_LENGTH;
 
 bool checkResultFail1(const bool result, const std::string &actionName, const SOCKET socket) {
     if (!result) return false;
 
     std::cout << actionName << " failed with error: " << WSAGetLastError() << std::endl;
-
-    closesocket(socket);
-
-    return true;
-}
-
-bool validate(const bool result, const SOCKET socket, const std::string &message) {
-    if (!result) return false;
-
-    std::cout << message << std::endl;
 
     closesocket(socket);
 

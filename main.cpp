@@ -12,11 +12,11 @@ int main() {
         connectionForeignPort = std::stoi(getenv(CONNECTION_FOREIGN_PORT));
     }
 
-    SimpleTCP simpleTcp (ADDR_TO_BIND, listenPort);
+    SimpleTCP simpleTcp {};
 
     if (!simpleTcp.initialize()) return -1;
 
-    simpleTcp.open(EPHEMERAL_PORT, connectionForeignPort, passiveConnection);
+    simpleTcp.open(listenPort, connectionForeignPort, passiveConnection);
 
     // while (true);
 }

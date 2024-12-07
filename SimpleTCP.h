@@ -15,18 +15,13 @@
 constexpr unsigned DEFAULT_TIMEOUT = 5 * 60 * 1000;
 
 class SimpleTCP {
-    const char* listenAddress;
-    const uint16_t listenPort;
-
     SOCKET listenSocket = 0;
 
     std::unordered_map<std::string, TransmissionControlBlock*> tcbMap {};
 
     void listenNewConnections();
 public:
-    SimpleTCP(const char* _localAddress, const uint16_t _localPort) : listenAddress(_localAddress), listenPort(_localPort) {}
-
-    bool initialize() const;
+    bool initialize();
 
     LocalConnection open(
         uint16_t localPort,
