@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "Constants.h"
 #include "tcb/LocalConnection.h"
 #include "ReceiveParams.h"
 #include "tcb/TransmissionControlBlock.h"
@@ -14,15 +15,23 @@
 constexpr unsigned DEFAULT_TIMEOUT = 5 * 60 * 1000;
 
 class SimpleTCP {
-    std::unordered_map<std::string, TransmissionControlBlock*> tcbMap;
+    const char* listenAddress;
+    const uint16_t listenPort;
+
+    SOCKET listenSocket = 0;
+
+    std::unordered_map<std::string, TransmissionControlBlock*> tcbMap {};
+
+    void listenNewConnections();
 public:
-    bool initialize();
+    SimpleTCP(const char* _localAddress, const uint16_t _localPort) : listenAddress(_localAddress), listenPort(_localPort) {}
+
+    bool initialize() const;
 
     LocalConnection open(
         uint16_t localPort,
-        /* foreign socket, */
-        bool passive,
-        uint16_t foreignPort = 0,
+        uint16_t foreignPort = EPHEMERAL_PORT,
+        bool passive = true,
         unsigned timeout = DEFAULT_TIMEOUT
     );
 

@@ -18,7 +18,8 @@ add_executable(simple_tcp_implementation main.cpp
         tcb/LocalConnection.h
         ReceiveParams.h
         byteop/insert/ByteInserter.h
-        byteop/insert/ByteInserter.cpp)
+        byteop/insert/ByteInserter.cpp
+        Constants.h)
 
 if(WIN32)
     target_link_libraries(simple_tcp_implementation wsock32 ws2_32)

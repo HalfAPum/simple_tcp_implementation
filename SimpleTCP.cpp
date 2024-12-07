@@ -9,21 +9,11 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <psdk_inc/_wsadata.h>
+#include <thread>
 
-#define ADDR_TO_BIND "127.0.0.1"
+#include "Constants.h"
 
-bool SimpleTCP::initialize() {
-    WSAData wsaData = {};
-
-    //Initialize winsock
-    const int iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
-    if (iResult != 0) {
-        std::cout << "WSAStartup faield with error: " << iResult << std::endl;
-        return false;
-    }
-
-    return true;
-}
+constexpr auto LISTEN_THREAD_NAME = "LISTEN_THREAD";
 
 bool checkResultFail(const bool result, const std::string &actionName, const SOCKET socket) {
     if (!result) return false;
@@ -35,39 +25,66 @@ bool checkResultFail(const bool result, const std::string &actionName, const SOC
     return true;
 }
 
-LocalConnection SimpleTCP::open(const uint16_t localPort, bool passive, const uint16_t foreignPort, unsigned timeout) {
+bool SimpleTCP::initialize() const {
+    WSAData wsaData = {};
+
+    //Initialize winsock
+    int iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+    if (iResult != 0) {
+        std::cout << "WSAStartup faield with error: " << iResult << std::endl;
+        return false;
+    }
+
+    //Initialize listening socket
+    const SOCKET listenSocket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
+    if (listenSocket == INVALID_SOCKET) {
+        std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
+        WSACleanup();
+        throw std::exception();
+    }
+
+    if (!setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, nullptr, 0)) {
+        perror("setsockopt");
+        throw std::exception();
+    }
+
+    sockaddr_in sockstr {};
+    sockstr.sin_addr.s_addr = inet_addr(listenAddress);
+    sockstr.sin_family = AF_INET;
+    sockstr.sin_port = htons(listenPort);
+    constexpr auto sockstr_size = static_cast<socklen_t>(sizeof(sockstr));
+
+    iResult = bind(listenSocket, reinterpret_cast<sockaddr *>(&sockstr), sockstr_size);
+    if (checkResultFail(iResult == SOCKET_ERROR, "bind", listenSocket)) {
+        throw std::exception();
+    }
+
+    std::thread listenThread(listenNewConnections, *this);
+    listenThread.join();
+
+    return true;
+}
+
+void SimpleTCP::listenNewConnections() {
+    while (true) {
+
+    }
+}
+
+
+LocalConnection SimpleTCP::open(
+    const uint16_t localPort,
+    const uint16_t foreignPort,
+    const bool passive,
+    const unsigned timeout
+) {
     auto *localConnection = new LocalConnection(inet_addr(ADDR_TO_BIND), localPort);
 
     const auto tcbIt = tcbMap.find(localConnection->getTCBKey());
 
     if (tcbIt == tcbMap.end()) {
         //TCB doesn't exist (i.e., CLOSED STATE)
-
-        //Try IPPROTO_RAW when succeed with other protocol
-        const SOCKET listenSocket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
-        if (listenSocket == INVALID_SOCKET) {
-            std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
-            WSACleanup();
-            throw std::exception();
-        }
-
-        if (!setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEADDR, nullptr, 0)) {
-            perror("setsockopt");
-            throw std::exception();
-        }
-
-        sockaddr_in sockstr {};
-        sockstr.sin_addr.s_addr = inet_addr(ADDR_TO_BIND);
-        sockstr.sin_family = AF_INET;
-        sockstr.sin_port = htons(localConnection->localPort);
-        constexpr auto sockstr_size = static_cast<socklen_t>(sizeof(sockstr));
-
-        const auto iResult = bind(listenSocket, reinterpret_cast<sockaddr *>(&sockstr), sockstr_size);
-        if (checkResultFail(iResult == SOCKET_ERROR, "bind", listenSocket)) {
-            throw std::exception();
-        }
-
-        auto *tcb = new TransmissionControlBlock(localConnection, passive, timeout, listenSocket);
+        auto *tcb = new TransmissionControlBlock(localConnection, passive, timeout);
         tcbMap[localConnection->getTCBKey()] = tcb;
 
         if (passive) {
@@ -75,7 +92,7 @@ LocalConnection SimpleTCP::open(const uint16_t localPort, bool passive, const ui
             tcb->start();
             return *localConnection;
         } else {
-            //TODO
+            tcb->state = SYN_SENT;
         }
     } else {
         auto tcb = tcbIt->second;

@@ -11,8 +11,7 @@
 #include <random>
 #include <ws2tcpip.h>
 
-constexpr unsigned BUFFLEN = 65535;
-constexpr auto RECV_ERROR = -1;
+#include "../Constants.h"
 
 constexpr int IP_HEADER_LENGTH = 20;
 constexpr int TCP_HEADER_MIN_LENGTH = 20;
@@ -89,7 +88,7 @@ void TransmissionControlBlock::processSegment(const IPv4Header &receiveIPv4Heade
 
             localConnection->createForeignSocket(receiveIPv4Header.sourceIPAddress, receiveTCPHeader.sourcePort);
             connectionSocket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
-            if (listenSocket == INVALID_SOCKET) {
+            if (connectionSocket == INVALID_SOCKET) {
                 std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
                 WSACleanup();
                 throw std::exception();
@@ -108,33 +107,33 @@ void TransmissionControlBlock::processSegment(const IPv4Header &receiveIPv4Heade
 void TransmissionControlBlock::run() {
     unsigned char recvbuf[BUFFLEN];
 
-    do {
-        const int recvResult = recv(listenSocket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
-
-        if (checkResultFail1(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
-            return;
-        }
-
-        //Verify received Result size.
-        //We should receive IP and TCP headers (each is at least 20 bytes long).
-        //Data payload is optional.
-        if (validate(recvResult < TCP_SEGMENT_MIN_LENGTH, listenSocket,
-            "Received message has size: " + std::to_string(recvResult) +
-            ". This is less than TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_MIN_LENGTH)
-        )) {
-            return;
-        }
-
-        auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
-        auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + IP_HEADER_LENGTH);
-
-        if (tcpHeader.destinationPort != localConnection->localPort) {
-            std::cout << "Ignore unknown packet to " << tcpHeader.destinationPort << std::endl;
-            continue;
-        }
-
-        processSegment(ipv4Header, tcpHeader);
-    } while((localConnection->localPort == 8080));
+    // do {
+    //     const int recvResult = recv(listenSocket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
+    //
+    //     if (checkResultFail1(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
+    //         return;
+    //     }
+    //
+    //     //Verify received Result size.
+    //     //We should receive IP and TCP headers (each is at least 20 bytes long).
+    //     //Data payload is optional.
+    //     if (validate(recvResult < TCP_SEGMENT_MIN_LENGTH, listenSocket,
+    //         "Received message has size: " + std::to_string(recvResult) +
+    //         ". This is less than TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_MIN_LENGTH)
+    //     )) {
+    //         return;
+    //     }
+    //
+    //     auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
+    //     auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + IP_HEADER_LENGTH);
+    //
+    //     if (tcpHeader.destinationPort != localConnection->localPort) {
+    //         std::cout << "Ignore unknown packet to " << tcpHeader.destinationPort << std::endl;
+    //         continue;
+    //     }
+    //
+    //     processSegment(ipv4Header, tcpHeader);
+    // } while((localConnection->localPort == 8080));
 }
 
 void TransmissionControlBlock::start() {
@@ -170,7 +169,7 @@ void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader
     TCPHeader::parseTCPHeader(sendbuf + IP_HEADER_LENGTH);
 
     const int sendResult = send(connectionSocket, (char *)(sendbuf), SEND_EMPTY_TCP_SEGMENT_LENGTH, 0);
-    checkResultFail1(sendResult == SOCKET_ERROR, "sendto", listenSocket);
+    checkResultFail1(sendResult == SOCKET_ERROR, "sendto", connectionSocket);
 
     std::cout << "SUCCESS? " << sendResult << std::endl;
 }

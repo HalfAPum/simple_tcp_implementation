@@ -4,7 +4,6 @@
 
 #ifndef TRANSMISSIONCONTROLBLOCK_H
 #define TRANSMISSIONCONTROLBLOCK_H
-#include <thread>
 #include <winsock2.h>
 
 #include "LocalConnection.h"
@@ -49,8 +48,6 @@ class TransmissionControlBlock {
     uint32_t irs = 0;
 
 
-    std::thread thread;
-
     void processSegment(const IPv4Header &receiveIPv4Header, const TCPHeader &receiveTCPHeader);
 
     void run();
@@ -62,19 +59,16 @@ public:
     LocalConnection *localConnection;
     bool passive;
     const unsigned timeout;
-    SOCKET listenSocket;
     SOCKET connectionSocket;
     State state = CLOSED;
 
     TransmissionControlBlock(
         LocalConnection *_localConnection,
         const bool _passive,
-        const unsigned _timeout,
-        const SOCKET _socket
+        const unsigned _timeout
     ) : localConnection(_localConnection),
         passive(_passive),
         timeout(_timeout),
-        listenSocket(_socket),
         connectionSocket(0)
         {}
 

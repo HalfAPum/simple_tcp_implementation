@@ -1,24 +1,22 @@
 
+#include "Constants.h"
 #include "SimpleTCP.h"
-
-#define LISTEN_PORT "LISTEN_PORT"
-#define PASSIVE_CONNECTION "PASSIVE_CONNECTION"
-#define CONNECT_PORT "CONNECT_PORT"
 
 int main() {
     const auto listenPort = std::stoi(getenv(LISTEN_PORT));
     const auto passiveConnection = std::stoi(getenv(PASSIVE_CONNECTION)) != 0;
 
-    int connectPort = 0;
+    int connectionForeignPort = EPHEMERAL_PORT;
 
     if (!passiveConnection) {
-        connectPort = std::stoi(getenv(CONNECT_PORT));
+        connectionForeignPort = std::stoi(getenv(CONNECTION_FOREIGN_PORT));
     }
 
-    SimpleTCP simpleTcp;
+    SimpleTCP simpleTcp (ADDR_TO_BIND, listenPort);
 
-    simpleTcp.initialize();
-    simpleTcp.open(listenPort, passiveConnection, connectPort);
+    if (!simpleTcp.initialize()) return -1;
 
-    while (true);
+    simpleTcp.open(EPHEMERAL_PORT, connectionForeignPort, passiveConnection);
+
+    // while (true);
 }
