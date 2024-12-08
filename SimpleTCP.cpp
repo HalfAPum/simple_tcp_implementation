@@ -74,7 +74,7 @@ bool SimpleTCP::initialize() {
         throw std::exception();
     }
 
-    std::thread listenThread(listenNewConnections, *this);
+    std::thread listenThread(&SimpleTCP::listenNewConnections, this);
     listenThread.detach();
 
     return true;
