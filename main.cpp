@@ -1,3 +1,10 @@
+#include <iostream>
+#include <string>
+#include <WinSock2.h>
+#include <Ws2tcpip.h>
+
+#pragma comment(lib, "ws2_32.lib")
+using namespace std;
 
 #include "Constants.h"
 #include "SimpleTCP.h"
@@ -17,6 +24,5 @@ int main() {
     if (!simpleTcp.initialize()) return -1;
 
     simpleTcp.open(listenPort, connectionForeignPort, passiveConnection);
-
-    // while (true);
+    while (true) {}
 }

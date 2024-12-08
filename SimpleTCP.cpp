@@ -4,6 +4,7 @@
 
 #include "SimpleTCP.h"
 
+#include <cassert>
 #include <iostream>
 #include <map>
 #include <winsock2.h>
@@ -50,7 +51,7 @@ bool SimpleTCP::initialize() {
     }
 
     //Initialize listening socket
-    listenSocket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
+    listenSocket = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (listenSocket == INVALID_SOCKET) {
         std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
         WSACleanup();
@@ -74,7 +75,7 @@ bool SimpleTCP::initialize() {
     }
 
     std::thread listenThread(listenNewConnections, *this);
-    listenThread.join();
+    listenThread.detach();
 
     return true;
 }
@@ -83,41 +84,41 @@ void SimpleTCP::listenNewConnections() {
     while (true) {
         unsigned char recvbuf[BUFFLEN];
 
-        do {
-            const int recvResult = recv(listenSocket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
+        const int recvResult = recv(listenSocket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
+        std::cout << "RECVRES " << recvResult << std::endl;
 
-            if (checkResultFail(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
-                return;
-            }
+        if (checkResultFail(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
+            return;
+        }
 
-            //Packets are guaranteed to be IP packets since we create socket on IP protocol
-            auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
+        //Packets are guaranteed to be have IP header since we use SOCK_RAW.
+        auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
 
-            //Filter Non-UDP packets
-            if (validate(ipv4Header.protocol != IPPROTO_UDP, "Received packet wasn't UDP.")) {
-                continue;
-            }
+        //Packets are also only UDP packets since we create socket on IPPROTO_UDP protocol
+        assert(ipv4Header.protocol == IPPROTO_UDP);
 
-            //Verify received Result size.
-            //We should receive IP, UDP and TCP headers (each is at least 20, 8, 20 bytes long respectively).
-            //Data payload is optional.
-            if (validate(recvResult < TCP_SEGMENT_MIN_LENGTH,
-                "Received message has size: " + std::to_string(recvResult) +
-                ". This is less than Minimal TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_MIN_LENGTH)
-            )) {
-                continue;
-            }
+        //Verify received Result size.
+        //We should receive IP, UDP and TCP headers (each is at least 20, 8, 20 bytes long respectively).
+        //Data payload is optional.
+        if (validate(recvResult < TCP_SEGMENT_MIN_LENGTH,
+            "Received message has size: " + std::to_string(recvResult) +
+            ". This is less than Minimal TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_MIN_LENGTH)
+        )) {
+            continue;
+        }
 
-            auto udpHeader = UDPHeader::parseUDPHeader(recvbuf + IP_HEADER_LENGTH);
-            auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + IP_HEADER_LENGTH + UDP_HEADER_LENGTH);
+        auto udpHeader = UDPHeader::parseUDPHeader(recvbuf + IP_HEADER_LENGTH);
+        auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + IP_HEADER_LENGTH + UDP_HEADER_LENGTH);
 
-            if (tcpHeader.destinationPort != localConnection->localPort) {
-                std::cout << "Ignore unknown packet to " << tcpHeader.destinationPort << std::endl;
-                continue;
-            }
+        auto tcbIt = tcbMap.find(tcpHeader.destinationPort);
 
-            processSegment(ipv4Header, tcpHeader);
-        } while((localConnection->localPort == 8080));
+        if (tcbIt == tcbMap.end()) {
+            std::cout << "Ignore unknown packet to " << tcpHeader.destinationPort << std::endl;
+            continue;
+        }
+
+        TransmissionControlBlock *tcb = tcbIt->second;
+        tcb->processListeningSocketMessage(ipv4Header, udpHeader, tcpHeader);
     }
 }
 
@@ -130,29 +131,39 @@ LocalConnection SimpleTCP::open(
 ) {
     auto *localConnection = new LocalConnection(inet_addr(ADDR_TO_BIND), localPort);
 
-    const auto tcbIt = tcbMap.find(localConnection->getTCBKey());
+    const auto tcbIt = tcbMap.find(localConnection->localPort);
 
     if (tcbIt == tcbMap.end()) {
         //TCB doesn't exist (i.e., CLOSED STATE)
         auto *tcb = new TransmissionControlBlock(localConnection, passive, timeout);
-        tcbMap[localConnection->getTCBKey()] = tcb;
+        tcbMap[localConnection->localPort] = tcb;
 
         if (passive) {
-            tcb->state = LISTEN;
-            tcb->start();
-            return *localConnection;
+            // tcb->connectionSocket = localConnection->createLocalSocket(false);
+            //
+            // unsigned char recvbuf[BUFFLEN];
+            //
+            // struct sockaddr_in SenderAddr;
+            // int SenderAddrSize = sizeof (SenderAddr);
+            //
+            // int recv = recvfrom(tcb->connectionSocket, (char*)recvbuf, BUFFLEN, 0,(SOCKADDR*) &SenderAddr,&SenderAddrSize);
+            // std::cout<<"FUCK RECEIVE " << recv << std::endl;
         } else {
-            tcb->state = SYN_SENT;
-        }
-    } else {
-        auto tcb = tcbIt->second;
-        if (tcb->state != LISTEN) {
-            std::cout << "error:  connection already exists" << std::endl;
-            throw std::exception();
+            tcb->sendSYN(foreignPort);
         }
 
-        //TODO
-        /*
+        return *localConnection;
+    }
+
+    //TCB exists
+    auto tcb = tcbIt->second;
+    if (tcb->state != LISTEN) {
+        std::cout << "error:  connection already exists" << std::endl;
+        throw std::exception();
+    }
+
+    //TODO
+    /*
         * If active and the foreign socket is specified, then change the
       connection from passive to active, select an ISS.  Send a SYN
       segment, set SND.UNA to ISS, SND.NXT to ISS+1.  Enter SYN-SENT
@@ -164,7 +175,6 @@ LocalConnection SimpleTCP::open(
       If Foreign socket was not specified, then return "error:  foreign
       socket unspecified".
          */
-    }
 
     return *localConnection;
 }
@@ -177,7 +187,7 @@ void SimpleTCP::send(
     bool URG,
     unsigned timeout
 ) {
-    const auto tcbIt = tcbMap.find(localConnection.getTCBKey());
+    const auto tcbIt = tcbMap.find(localConnection.localPort);
 
     //CLOSED STATE (i.e., TCB does not exist)
     if (tcbIt == tcbMap.end()) {
@@ -199,7 +209,7 @@ ReceiveParams SimpleTCP::receive(
     char *buffer,
     unsigned byteCount
 ) {
-    const auto tcbIt = tcbMap.find(localConnection.getTCBKey());
+    const auto tcbIt = tcbMap.find(localConnection.localPort);
 
     //CLOSED STATE (i.e., TCB does not exist)
     if (tcbIt == tcbMap.end()) {

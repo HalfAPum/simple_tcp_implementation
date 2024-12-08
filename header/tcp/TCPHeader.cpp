@@ -8,6 +8,7 @@
 
 #include "../../byteop/extract/ByteExtractor.h"
 #include "../../byteop/insert/ByteInserter.h"
+#include "../../tcb/LocalConnection.h"
 
 TCPHeader TCPHeader::parseTCPHeader(const unsigned char* recvbuf) {
     TCPHeader header {};
@@ -116,11 +117,11 @@ TCPHeader TCPHeader::parseTCPHeader(const unsigned char* recvbuf) {
     return header;
 }
 
-TCPHeader TCPHeader::constructSendTCPHeader(const uint16_t localPort) const {
+TCPHeader TCPHeader::constructSendTCPHeader(const LocalConnection *localConnection) {
     TCPHeader sTCPHeader {};
 
-    sTCPHeader.sourcePort = localPort;
-    sTCPHeader.destinationPort = sourcePort;
+    sTCPHeader.sourcePort = localConnection->localPort;
+    sTCPHeader.destinationPort = localConnection->foreignPort;
 
     //No SEQ number for empty header.
     sTCPHeader.sequenceNumber = 0;
@@ -139,7 +140,7 @@ TCPHeader TCPHeader::constructSendTCPHeader(const uint16_t localPort) const {
     sTCPHeader.windowSize = 0xFFFF;
 
     //Calculate checksum before sending segment.
-    // uint16_t checksum;
+    sTCPHeader.checksum = 0;
 
     //No URG pointer for empty header.
     sTCPHeader.urgentPointer = 0;

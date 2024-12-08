@@ -4,6 +4,7 @@
 
 #include "TransmissionControlBlock.h"
 
+#include <cassert>
 #include <atomic>
 #include <iostream>
 #include <thread>
@@ -12,8 +13,6 @@
 #include <ws2tcpip.h>
 
 #include "../Constants.h"
-
-constexpr int SEND_EMPTY_TCP_SEGMENT_LENGTH = IP_HEADER_LENGTH + SEND_TCP_HEADER_LENGTH;
 
 bool checkResultFail1(const bool result, const std::string &actionName, const SOCKET socket) {
     if (!result) return false;
@@ -35,59 +34,94 @@ void printMessage(char buffer[BUFFLEN], const int size) {
     printf("\n");
 }
 
+void TransmissionControlBlock::processListeningSocketMessage(
+    const IPv4Header &ipv4Header,
+    const UDPHeader &udpHeader,
+    const TCPHeader &tcpHeader
+) {
+    if (connectionSocket != INVALID_SOCKET) return;
+
+    localConnection->createForeignSocketAddress(inet_addr(ADDR_TO_BIND), tcpHeader.sourcePort);
+
+    assert(state == LISTEN);
+
+    std::cout << "IS SYN??? " << tcpHeader.SYN << std::endl;
+}
+
+
+void TransmissionControlBlock::sendSYN(const uint16_t foreignPort) {
+    connectionSocket = localConnection->createLocalSocket(true);
+    localConnection->createForeignSocketAddress(inet_addr(ADDR_TO_BIND), foreignPort);
+
+    TCPHeader header = TCPHeader::constructSendTCPHeader(localConnection);
+
+    //Configure header
+    iss = generateISS();
+    header.sequenceNumber = iss;
+    header.SYN = true;
+
+    sendTCPSegment(header);
+
+    //Configure TCB
+    snd_una = iss;
+    snd_nxt = iss + 1;
+    state = SYN_SENT;
+}
+
+
 
 void TransmissionControlBlock::processSegment(const IPv4Header &receiveIPv4Header, const TCPHeader &receiveTCPHeader) {
-    IPv4Header sendIPv4Header = receiveIPv4Header.constructSendIPv4Header();
-    TCPHeader sendTCPHeader = receiveTCPHeader.constructSendTCPHeader(localConnection->localPort);
-
-    if (state == LISTEN) {
-        if (receiveTCPHeader.RST) {
-            // An incoming RST should be ignored.  Return.
-            return;
-        }
-
-        // Any acknowledgment is bad if it arrives on a connection still in
-        // the LISTEN state.  An acceptable reset segment should be formed
-        // for any arriving ACK-bearing segment.  The RST should be
-        // formatted as follows:
-        //   <SEQ=SEG.ACK><CTL=RST>
-        // Return.
-
-        if (receiveTCPHeader.ackNumber != 0) {
-            //TODO
-        }
-
-        if (receiveTCPHeader.SYN) {
-            std::cout << "YEAH! IT'S SYN!" << std::endl;
-
-            iss = generateISS();
-            sendTCPHeader.sequenceNumber = iss;
-            rcv_nxt = receiveTCPHeader.sequenceNumber + 1;
-            sendTCPHeader.ackNumber = rcv_nxt;
-            sendTCPHeader.SYN = true;
-            sendTCPHeader.ACK = true;
-
-            snd_nxt = iss + 1;
-            snd_una = iss;
-
-            state = SYN_RECEIVED;
-
-            localConnection->createForeignSocket(receiveIPv4Header.sourceIPAddress, receiveTCPHeader.sourcePort);
-            connectionSocket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
-            if (connectionSocket == INVALID_SOCKET) {
-                std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
-                WSACleanup();
-                throw std::exception();
-            }
-            const int iResult = connect(connectionSocket, localConnection->foreignSockaddrr, localConnection->foreignSockaddrrLength);
-            if (checkResultFail1(iResult == SOCKET_ERROR, "connect", connectionSocket)) {
-                WSACleanup();
-                throw std::exception();
-            }
-
-            sendTCPSegment(sendIPv4Header, sendTCPHeader);
-        }
-    }
+    // IPv4Header sendIPv4Header = receiveIPv4Header.constructSendIPv4Header();
+    // // TCPHeader sendTCPHeader = receiveTCPHeader.constructSendTCPHeader(localConnection->localPort);
+    //
+    // if (state == LISTEN) {
+    //     if (receiveTCPHeader.RST) {
+    //         // An incoming RST should be ignored.  Return.
+    //         return;
+    //     }
+    //
+    //     // Any acknowledgment is bad if it arrives on a connection still in
+    //     // the LISTEN state.  An acceptable reset segment should be formed
+    //     // for any arriving ACK-bearing segment.  The RST should be
+    //     // formatted as follows:
+    //     //   <SEQ=SEG.ACK><CTL=RST>
+    //     // Return.
+    //
+    //     if (receiveTCPHeader.ackNumber != 0) {
+    //         //TODO
+    //     }
+    //
+    //     if (receiveTCPHeader.SYN) {
+    //         std::cout << "YEAH! IT'S SYN!" << std::endl;
+    //
+    //         iss = generateISS();
+    //         sendTCPHeader.sequenceNumber = iss;
+    //         rcv_nxt = receiveTCPHeader.sequenceNumber + 1;
+    //         sendTCPHeader.ackNumber = rcv_nxt;
+    //         sendTCPHeader.SYN = true;
+    //         sendTCPHeader.ACK = true;
+    //
+    //         snd_nxt = iss + 1;
+    //         snd_una = iss;
+    //
+    //         state = SYN_RECEIVED;
+    //
+    //         localConnection->createForeignSocket(receiveIPv4Header.sourceIPAddress, receiveTCPHeader.sourcePort);
+    //         connectionSocket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
+    //         if (connectionSocket == INVALID_SOCKET) {
+    //             std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
+    //             WSACleanup();
+    //             throw std::exception();
+    //         }
+    //         const int iResult = connect(connectionSocket, localConnection->foreignSockaddrr, localConnection->foreignSockaddrrLength);
+    //         if (checkResultFail1(iResult == SOCKET_ERROR, "connect", connectionSocket)) {
+    //             WSACleanup();
+    //             throw std::exception();
+    //         }
+    //
+    //         sendTCPSegment(sendIPv4Header, sendTCPHeader);
+    //     }
+    // }
 }
 
 void TransmissionControlBlock::run() {
@@ -136,25 +170,23 @@ uint32_t TransmissionControlBlock::generateISS() {
     return distrib(gen);
 }
 
-void TransmissionControlBlock::sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader &sTCPHeader) {
-    //Todo temp
-    unsigned char sendbuf[SEND_EMPTY_TCP_SEGMENT_LENGTH];
+void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
+    unsigned char sendbuf[SEND_TCP_HEADER_LENGTH];
 
-    sIPv4Header.fillSendBuffer(sendbuf);
-    sTCPHeader.fillSendBuffer(sendbuf + IP_HEADER_LENGTH);
+    sTCPHeader.fillSendBuffer(sendbuf);
 
     std::cout << "----------------------------------------------------------------------------" << std::endl;
     std::cout << "------------------------------------SEND-PACKET-----------------------------" << std::endl;
 
-    //DEGUB Verify headers
-    IPv4Header::parseIPv4Header(sendbuf);
 
-    //Calculate TCP checksum
-    sTCPHeader.calculateChecksum(sIPv4Header, sendbuf + IP_HEADER_LENGTH);
+    // //Calculate TCP checksum
+    // sTCPHeader.calculateChecksum(sIPv4Header, sendbuf + IP_HEADER_LENGTH);
 
-    TCPHeader::parseTCPHeader(sendbuf + IP_HEADER_LENGTH);
+    //DEGUB Verify header
+    TCPHeader::parseTCPHeader(sendbuf);
 
-    const int sendResult = send(connectionSocket, (char *)(sendbuf), SEND_EMPTY_TCP_SEGMENT_LENGTH, 0);
+    const int sendResult = sendto(connectionSocket, (char *)(sendbuf), SEND_TCP_HEADER_LENGTH, 0,
+        localConnection->foreignSockaddrr, sizeof(*localConnection->foreignSockaddrr));
     checkResultFail1(sendResult == SOCKET_ERROR, "sendto", connectionSocket);
 
     std::cout << "SUCCESS? " << sendResult << std::endl;

@@ -15,9 +15,10 @@
 constexpr unsigned DEFAULT_TIMEOUT = 5 * 60 * 1000;
 
 class SimpleTCP {
-    SOCKET listenSocket = 0;
+    SOCKET listenSocket = INVALID_SOCKET;
 
-    std::unordered_map<std::string, TransmissionControlBlock*> tcbMap {};
+    //Local port to TCB
+    std::unordered_map<uint16_t, TransmissionControlBlock*> tcbMap {};
 
     void listenNewConnections();
 public:

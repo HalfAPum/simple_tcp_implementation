@@ -10,6 +10,7 @@
 #include "State.h"
 #include "../header/ipv4/IPv4Header.h"
 #include "../header/tcp/TCPHeader.h"
+#include "../header/udp/UDPHeader.h"
 
 
 class TransmissionControlBlock {
@@ -54,7 +55,7 @@ class TransmissionControlBlock {
 
     static uint32_t generateISS();
 
-    void sendTCPSegment(IPv4Header &sIPv4Header, TCPHeader &sTCPHeader /*add data buffer and it's length later*/);
+    void sendTCPSegment(TCPHeader &sTCPHeader /*add data buffer and it's length later*/);
 public:
     LocalConnection *localConnection;
     bool passive;
@@ -69,14 +70,22 @@ public:
     ) : localConnection(_localConnection),
         passive(_passive),
         timeout(_timeout),
-        connectionSocket(0)
-        {}
+        connectionSocket(INVALID_SOCKET),
+        state(passive ? LISTEN : CLOSED) {}
 
     ~TransmissionControlBlock() {
         delete localConnection;
     }
 
     void start();
+
+    void processListeningSocketMessage(
+        const IPv4Header & ipv4Header,
+        const UDPHeader & udpHeader,
+        const TCPHeader & tcpHeader
+    );
+
+    void sendSYN(uint16_t foreignPort);
 
 };
 
