@@ -85,7 +85,6 @@ void SimpleTCP::listenNewConnections() {
         unsigned char recvbuf[BUFFLEN];
 
         const int recvResult = recv(listenSocket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
-        std::cout << "RECVRES " << recvResult << std::endl;
 
         if (checkResultFail(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
             return;
@@ -116,6 +115,10 @@ void SimpleTCP::listenNewConnections() {
             std::cout << "Ignore unknown packet to " << tcpHeader.destinationPort << std::endl;
             continue;
         }
+
+        ipv4Header.print();
+        udpHeader.print();
+        tcpHeader.print();
 
         TransmissionControlBlock *tcb = tcbIt->second;
         tcb->processListeningSocketMessage(ipv4Header, udpHeader, tcpHeader);

@@ -188,6 +188,4 @@ void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
     const int sendResult = sendto(connectionSocket, (char *)(sendbuf), SEND_TCP_HEADER_LENGTH, 0,
         localConnection->foreignSockaddrr, sizeof(*localConnection->foreignSockaddrr));
     checkResultFail1(sendResult == SOCKET_ERROR, "sendto", connectionSocket);
-
-    std::cout << "SUCCESS? " << sendResult << std::endl;
 }

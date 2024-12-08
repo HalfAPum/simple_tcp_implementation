@@ -16,6 +16,7 @@ struct UDPHeader {
     uint16_t checksum;
 
     static UDPHeader parseUDPHeader(const unsigned char* recvbuf);
+    void print() const;
 
     void calculateChecksum(const IPv4Header &ipv4Header, unsigned char* sendbuf);
 

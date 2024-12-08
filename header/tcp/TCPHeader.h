@@ -5,6 +5,8 @@
 #ifndef TCPHEADER_H
 #define TCPHEADER_H
 #include <cstdint>
+#include <iosfwd>
+#include <istream>
 
 #include "../ipv4/IPv4Header.h"
 
@@ -38,7 +40,11 @@ struct TCPHeader {
     //Options
     uint16_t maxSegmentSizeOption;
 
+    //Debug
+    std::string printOptions;
+
     static TCPHeader parseTCPHeader(const unsigned char* recvbuf);
+    void print() const;
 
     [[nodiscard]] static TCPHeader constructSendTCPHeader(const LocalConnection *localConnection);
 
