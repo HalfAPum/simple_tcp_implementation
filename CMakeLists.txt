@@ -22,7 +22,11 @@ add_executable(simple_tcp_implementation main.cpp
         Constants.h
         header/udp/UDPHeader.h
         header/udp/UDPHeader.cpp
-        tcb/LocalConnection.cpp)
+        tcb/LocalConnection.cpp
+        socket/SocketFactory.h
+        socket/SocketFactory.cpp
+        facade/TCPFacade.h
+        facade/TCPFacade.cpp)
 
 if(WIN32)
     target_link_libraries(simple_tcp_implementation wsock32 ws2_32)

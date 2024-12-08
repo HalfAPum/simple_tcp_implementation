@@ -14,26 +14,6 @@
 
 #include "../Constants.h"
 
-bool checkResultFail1(const bool result, const std::string &actionName, const SOCKET socket) {
-    if (!result) return false;
-
-    std::cout << actionName << " failed with error: " << WSAGetLastError() << std::endl;
-
-    closesocket(socket);
-
-    return true;
-}
-
-void printMessage(char buffer[BUFFLEN], const int size) {
-    std::cout << "Message size: " << size << std::endl;
-
-    for(int i = 0 ; i < size ; ++i){
-        std::cout << buffer[i];
-    }
-    std::cout << std::endl;
-    printf("\n");
-}
-
 void TransmissionControlBlock::processListeningSocketMessage(
     const IPv4Header &ipv4Header,
     const UDPHeader &udpHeader,
@@ -41,6 +21,7 @@ void TransmissionControlBlock::processListeningSocketMessage(
 ) {
     if (connectionSocket != INVALID_SOCKET) return;
 
+    connectionSocket = localConnection->createLocalSocket(true);
     localConnection->createForeignSocketAddress(inet_addr(ADDR_TO_BIND), tcpHeader.sourcePort);
 
     assert(state == LISTEN);
@@ -183,9 +164,12 @@ void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
     // sTCPHeader.calculateChecksum(sIPv4Header, sendbuf + IP_HEADER_LENGTH);
 
     //DEGUB Verify header
-    TCPHeader::parseTCPHeader(sendbuf);
+    TCPHeader::parseTCPHeader(sendbuf).print();
 
     const int sendResult = sendto(connectionSocket, (char *)(sendbuf), SEND_TCP_HEADER_LENGTH, 0,
         localConnection->foreignSockaddrr, sizeof(*localConnection->foreignSockaddrr));
-    checkResultFail1(sendResult == SOCKET_ERROR, "sendto", connectionSocket);
+
+    if (sendResult == SOCKET_ERROR) {
+        std::cout << "Couldn't send message, error occured: " << WSAGetLastError() << std::endl;
+    }
 }

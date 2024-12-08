@@ -14,6 +14,7 @@
 
 #include "Constants.h"
 #include "header/udp/UDPHeader.h"
+#include "socket/SocketFactory.h"
 
 constexpr auto LISTEN_THREAD_NAME = "LISTEN_THREAD";
 
@@ -51,26 +52,10 @@ bool SimpleTCP::initialize() {
     }
 
     //Initialize listening socket
-    listenSocket = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
-    if (listenSocket == INVALID_SOCKET) {
-        std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
-        WSACleanup();
-        throw std::exception();
-    }
+    listenSocket = SocketFactory::createUDPSocket(SOCK_RAW, true, DEFAULT_TCP_PORT);
 
     if (!setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, nullptr, 0)) {
         perror("setsockopt");
-        throw std::exception();
-    }
-
-    sockaddr_in sockstr {};
-    sockstr.sin_addr.s_addr = inet_addr(ADDR_TO_BIND);
-    sockstr.sin_family = AF_INET;
-    sockstr.sin_port = htons(DEFAULT_TCP_PORT);
-    constexpr auto sockstr_size = static_cast<socklen_t>(sizeof(sockstr));
-
-    iResult = bind(listenSocket, reinterpret_cast<sockaddr *>(&sockstr), sockstr_size);
-    if (checkResultFail(iResult == SOCKET_ERROR, "bind", listenSocket)) {
         throw std::exception();
     }
 
@@ -112,7 +97,16 @@ void SimpleTCP::listenNewConnections() {
         auto tcbIt = tcbMap.find(tcpHeader.destinationPort);
 
         if (tcbIt == tcbMap.end()) {
-            std::cout << "Ignore unknown packet to " << tcpHeader.destinationPort << std::endl;
+            //TCB does not exist.
+
+            if (tcpHeader.RST) continue;
+
+            if (tcpHeader.ACK) {
+
+            } else {
+
+            }
+            std::cout << "Unknown packet to " << tcpHeader.destinationPort << std::endl;
             continue;
         }
 
@@ -141,17 +135,7 @@ LocalConnection SimpleTCP::open(
         auto *tcb = new TransmissionControlBlock(localConnection, passive, timeout);
         tcbMap[localConnection->localPort] = tcb;
 
-        if (passive) {
-            // tcb->connectionSocket = localConnection->createLocalSocket(false);
-            //
-            // unsigned char recvbuf[BUFFLEN];
-            //
-            // struct sockaddr_in SenderAddr;
-            // int SenderAddrSize = sizeof (SenderAddr);
-            //
-            // int recv = recvfrom(tcb->connectionSocket, (char*)recvbuf, BUFFLEN, 0,(SOCKADDR*) &SenderAddr,&SenderAddrSize);
-            // std::cout<<"FUCK RECEIVE " << recv << std::endl;
-        } else {
+        if (!passive) {
             tcb->sendSYN(foreignPort);
         }
 
