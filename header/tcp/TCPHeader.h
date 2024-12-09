@@ -20,6 +20,8 @@ constexpr int MAX_SEGMENT_SIZE_OPTION_KIND = 0x02;
 
 constexpr int MAX_SEGMENT_SIZE_OPTION_LENGTH = 0x04;
 
+constexpr int DATA_OFFSET_WORD_LENGTH = 4;
+
 struct TCPHeader {
     uint16_t sourcePort;
     uint16_t destinationPort;
@@ -51,6 +53,8 @@ struct TCPHeader {
     void fillSendBuffer(unsigned char* sendbuff) const;
 
     void calculateChecksum(const IPv4Header &ipv4Header, unsigned char* sendbuf);
+
+    int getDataOffsetBytes();
 };
 
 

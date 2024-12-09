@@ -13,6 +13,7 @@
 #include <ws2tcpip.h>
 
 #include "../facade/TCPFacade.h"
+#include "../Constants.h"
 
 //Could modify local port
 void TransmissionControlBlock::processListeningSocketMessage(
@@ -20,15 +21,14 @@ void TransmissionControlBlock::processListeningSocketMessage(
     const UDPHeader &udpHeader,
     const TCPHeader &tcpHeader
 ) {
-    if (state == LISTEN) {
-        connectionSocket = localConnection->createLocalSocket(false);
-        localConnection->createForeignSocketAddress(tcpHeader.sourcePort);
+    if (connectionSocket != INVALID_SOCKET) return;
 
-        std::cout << "IS SYN??? " << tcpHeader.SYN << std::endl;
-    } else if (state == SYN_SENT) {
-        std::cout << "IS SYN ACK??? " << tcpHeader.SYN << "+" << tcpHeader.ACK << std::endl;
+    connectionSocket = localConnection->createLocalSocket(true);
+    localConnection->createForeignSocketAddress(tcpHeader.sourcePort);
 
-    }
+    assert(state == LISTEN);
+
+    std::cout << "IS SYN??? " << tcpHeader.SYN << std::endl;
 }
 
 //Modifies local port
@@ -64,6 +64,7 @@ void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
     unsigned char sendbuf[SEND_TCP_HEADER_LENGTH];
 
     //temp
+    sTCPHeader.ACK = true;
     sTCPHeader.ackNumber = sTCPHeader.sequenceNumber + 100;
 
     sTCPHeader.fillSendBuffer(sendbuf);

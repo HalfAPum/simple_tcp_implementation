@@ -22,7 +22,7 @@ TCPHeader TCPHeader::parseTCPHeader(const unsigned char* recvbuf) {
     header.ackNumber = ByteExtractor::get32BitInt(recvbuf + 8);
     //Data Offset (4 bits).
     //Data offset is represented in window (window = 1/4 of byte).
-    header.dataOffset = ByteExtractor::get4BitInt(recvbuf + 12, true) * 4;
+    header.dataOffset = ByteExtractor::get4BitInt(recvbuf + 12, true);
     //Reserved (6 bits)
     //Get 4 bits left from [recvbuf + 12] and concatenate them with 2 bits from next byte.
     header.reserved = (ByteExtractor::get4BitInt(recvbuf + 12, false) << 2)
@@ -52,7 +52,7 @@ TCPHeader TCPHeader::parseTCPHeader(const unsigned char* recvbuf) {
     //Default initialize Max Segment Size to max value
     header.maxSegmentSizeOption = 0xFFFF;
 
-    for (int optionIndex = 20; optionIndex < header.dataOffset;) {
+    for (int optionIndex = 20; optionIndex < header.getDataOffsetBytes();) {
         const uint8_t kind = recvbuf[optionIndex];
 
         //End of Options List
@@ -138,7 +138,7 @@ TCPHeader TCPHeader::constructSendTCPHeader(const LocalConnection *localConnecti
     sTCPHeader.maxSegmentSizeOption = 0xFFFF;
 
     //Data offset represents offset in "word" one word is 1/4 of byte.
-    sTCPHeader.dataOffset = SEND_TCP_HEADER_LENGTH / 4;
+    sTCPHeader.dataOffset = SEND_TCP_HEADER_LENGTH / DATA_OFFSET_WORD_LENGTH;
 
     return sTCPHeader;
 }
@@ -204,4 +204,8 @@ void TCPHeader::calculateChecksum(const IPv4Header &ipv4Header, unsigned char* s
 
     checksum = sum;
     ByteInserter::insert16BitInt(sendbuf + 16, sum);
+}
+
+int TCPHeader::getDataOffsetBytes() {
+    return dataOffset * DATA_OFFSET_WORD_LENGTH;
 }

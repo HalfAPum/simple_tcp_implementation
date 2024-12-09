@@ -69,10 +69,8 @@ bool SimpleTCP::initialize() {
 void SimpleTCP::listenNewConnections() {
     while (true) {
         unsigned char recvbuf[BUFFLEN];
-        std::cout << "FUCK BEFORE RECEIVE" << std::endl;
 
         int packetLength = TCPFacade::receive(listenSocket, recvbuf, BUFFLEN);
-        std::cout << "FUCK " << packetLength << std::endl;
         //Packets are guaranteed to be have IP header since we use SOCK_RAW.
         auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
 
@@ -124,7 +122,7 @@ void SimpleTCP::listenNewConnections() {
                 rstHeader.RST = true;
             } else {
                 rstHeader.sequenceNumber = 0;
-                const int segLen = packetLength - IP_HEADER_LENGTH - UDP_HEADER_LENGTH - tcpHeader.dataOffset * 4;
+                const int segLen = packetLength - IP_HEADER_LENGTH - UDP_HEADER_LENGTH - tcpHeader.getDataOffsetBytes();
                 rstHeader.ackNumber = tcpHeader.sequenceNumber + segLen;
                 rstHeader.RST = true;
                 rstHeader.ACK = true;
