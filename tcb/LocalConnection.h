@@ -7,14 +7,12 @@
 
 #include <cstdint>
 #include <winsock2.h>
-#include <ws2tcpip.h>
 
 struct LocalConnection {
     //Local socket info
     const uint32_t bindAddress;
     uint16_t localPort;
     //Foreign socket info
-    uint32_t foreignAddress = 0;
     uint16_t foreignPort = 0;
     sockaddr* foreignSockaddrr;
 
@@ -32,7 +30,7 @@ struct LocalConnection {
     }
 
     SOCKET createLocalSocket(bool randomPort);
-    void createForeignSocketAddress(const uint32_t &_foreignAddress, const uint16_t &_foreignPort);
+    void createForeignSocketAddress(const uint16_t &_foreignPort);
 };
 
 

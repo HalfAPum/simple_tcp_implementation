@@ -13,6 +13,7 @@
 #include <thread>
 
 #include "Constants.h"
+#include "facade/TCPFacade.h"
 #include "header/udp/UDPHeader.h"
 #include "socket/SocketFactory.h"
 
@@ -68,13 +69,10 @@ bool SimpleTCP::initialize() {
 void SimpleTCP::listenNewConnections() {
     while (true) {
         unsigned char recvbuf[BUFFLEN];
+        std::cout << "FUCK BEFORE RECEIVE" << std::endl;
 
-        const int recvResult = recv(listenSocket, reinterpret_cast<char*>(recvbuf), BUFFLEN, 0);
-
-        if (checkResultFail(recvResult == RECV_ERROR, "recvResult", listenSocket)) {
-            return;
-        }
-
+        int packetLength = TCPFacade::receive(listenSocket, recvbuf, BUFFLEN);
+        std::cout << "FUCK " << packetLength << std::endl;
         //Packets are guaranteed to be have IP header since we use SOCK_RAW.
         auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
 
@@ -84,8 +82,8 @@ void SimpleTCP::listenNewConnections() {
         //Verify received Result size.
         //We should receive IP, UDP and TCP headers (each is at least 20, 8, 20 bytes long respectively).
         //Data payload is optional.
-        if (validate(recvResult < TCP_SEGMENT_MIN_LENGTH,
-            "Received message has size: " + std::to_string(recvResult) +
+        if (validate(packetLength < TCP_SEGMENT_MIN_LENGTH,
+            "Received message has size: " + std::to_string(packetLength) +
             ". This is less than Minimal TCP_SEGMENT_LENGTH " + std::to_string(TCP_SEGMENT_MIN_LENGTH)
         )) {
             continue;
@@ -94,6 +92,18 @@ void SimpleTCP::listenNewConnections() {
         auto udpHeader = UDPHeader::parseUDPHeader(recvbuf + IP_HEADER_LENGTH);
         auto tcpHeader = TCPHeader::parseTCPHeader(recvbuf + IP_HEADER_LENGTH + UDP_HEADER_LENGTH);
 
+        mutex_.lock();
+        //Filter calls we make by ourself. Ignore comparing address since we test now only local calls.
+        if (auto ownCallIt = tcbMap.find(tcpHeader.sourcePort); ownCallIt != tcbMap.end()) {
+            std::cout << "FILTER?? SP " << tcpHeader.sourcePort << std::endl;
+            for (auto &e: tcbMap) {
+                std::cout << "occupiedLocal " << e.first << std::endl;
+            }
+            mutex_.unlock();
+            continue;
+        }
+        mutex_.unlock();
+
         auto tcbIt = tcbMap.find(tcpHeader.destinationPort);
 
         if (tcbIt == tcbMap.end()) {
@@ -101,12 +111,35 @@ void SimpleTCP::listenNewConnections() {
 
             if (tcpHeader.RST) continue;
 
+            auto *rstConnection = new LocalConnection(inet_addr(ADDR_TO_BIND), tcpHeader.destinationPort);
+            const SOCKET rstSocket = rstConnection->createLocalSocket(false);
+            rstConnection->createForeignSocketAddress(tcpHeader.sourcePort);
+
+            auto rstHeader = TCPHeader::constructSendTCPHeader(rstConnection);
+
+            unsigned char sendbuf[SEND_TCP_HEADER_LENGTH];
+
             if (tcpHeader.ACK) {
-
+                rstHeader.sequenceNumber = tcpHeader.ackNumber;
+                rstHeader.RST = true;
             } else {
-
+                rstHeader.sequenceNumber = 0;
+                const int segLen = packetLength - IP_HEADER_LENGTH - UDP_HEADER_LENGTH - tcpHeader.dataOffset * 4;
+                rstHeader.ackNumber = tcpHeader.sequenceNumber + segLen;
+                rstHeader.RST = true;
+                rstHeader.ACK = true;
             }
-            std::cout << "Unknown packet to " << tcpHeader.destinationPort << std::endl;
+
+            rstHeader.fillSendBuffer(sendbuf);
+            std::cout << "SEND RST PACKET " << std::endl;
+            auto debug = TCPHeader::parseTCPHeader(sendbuf);
+            debug.print();
+
+            TCPFacade::send(rstSocket, sendbuf, SEND_TCP_HEADER_LENGTH, rstConnection->foreignSockaddrr);
+
+            closesocket(rstSocket);
+            delete rstConnection;
+
             continue;
         }
 
@@ -128,15 +161,19 @@ LocalConnection SimpleTCP::open(
 ) {
     auto *localConnection = new LocalConnection(inet_addr(ADDR_TO_BIND), localPort);
 
-    const auto tcbIt = tcbMap.find(localConnection->localPort);
+    const auto tcbIt = tcbMap.find(localPort);
 
     if (tcbIt == tcbMap.end()) {
         //TCB doesn't exist (i.e., CLOSED STATE)
         auto *tcb = new TransmissionControlBlock(localConnection, passive, timeout);
-        tcbMap[localConnection->localPort] = tcb;
+        tcbMap.emplace(localPort, tcb);
 
         if (!passive) {
+            mutex_.lock();
             tcb->sendSYN(foreignPort);
+            tcbMap.erase(localPort);
+            tcbMap.emplace(tcb->localConnection->localPort, tcb);
+            mutex_.unlock();
         }
 
         return *localConnection;

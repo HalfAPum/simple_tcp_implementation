@@ -77,8 +77,6 @@ public:
         delete localConnection;
     }
 
-    void start();
-
     void processListeningSocketMessage(
         const IPv4Header & ipv4Header,
         const UDPHeader & udpHeader,

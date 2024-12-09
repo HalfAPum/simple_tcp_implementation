@@ -4,6 +4,7 @@
 
 #ifndef SIMPLETCP_H
 #define SIMPLETCP_H
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -19,6 +20,8 @@ class SimpleTCP {
 
     //Local port to TCB
     std::unordered_map<uint16_t, TransmissionControlBlock*> tcbMap {};
+
+    std::mutex mutex_;
 
     void listenNewConnections();
 public:

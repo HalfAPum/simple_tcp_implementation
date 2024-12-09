@@ -8,7 +8,7 @@
 #include <iostream>
 
 #include "../socket/SocketFactory.h"
-#include "../Constants.h"
+#include <ws2tcpip.h>
 
 
 SOCKET LocalConnection::createLocalSocket(const bool randomPort) {
@@ -25,8 +25,7 @@ SOCKET LocalConnection::createLocalSocket(const bool randomPort) {
 }
 
 
-void LocalConnection::createForeignSocketAddress(const uint32_t &_foreignAddress, const uint16_t &_foreignPort) {
-    foreignAddress = _foreignAddress;
+void LocalConnection::createForeignSocketAddress(const uint16_t &_foreignPort) {
     foreignPort = _foreignPort;
 
     auto *sockstr = new sockaddr_in();
