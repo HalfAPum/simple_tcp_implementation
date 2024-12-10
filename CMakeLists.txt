@@ -3,31 +3,12 @@ project(simple_tcp_implementation)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(simple_tcp_implementation main.cpp
-        header/ipv4/IPv4Header.h
-        header/ipv4/IPv4Header.cpp
-        header/tcp/TCPHeader.h
-        header/tcp/TCPHeader.cpp
-        byteop/extract/ByteExtractor.h
-        byteop/extract/ByteExtractor.cpp
-        tcb/State.h
-        SimpleTCP.h
-        SimpleTCP.cpp
-        tcb/TransmissionControlBlock.h
-        tcb/TransmissionControlBlock.cpp
-        tcb/LocalConnection.h
-        ReceiveParams.h
-        byteop/insert/ByteInserter.h
-        byteop/insert/ByteInserter.cpp
-        Constants.h
-        header/udp/UDPHeader.h
-        header/udp/UDPHeader.cpp
-        tcb/LocalConnection.cpp
-        socket/SocketFactory.h
-        socket/SocketFactory.cpp
-        facade/TCPFacade.h
-        facade/TCPFacade.cpp)
+set(SOURCE_FILES main.cpp)
+add_executable(SimpleTCP_run ${SOURCE_FILES})
 
-if(WIN32)
-    target_link_libraries(simple_tcp_implementation wsock32 ws2_32)
-endif()
+include_directories(SimpleTCP_lib)
+add_subdirectory(SimpleTCP_lib)
+
+target_link_libraries(SimpleTCP_run SimpleTCP_lib)
+
+add_subdirectory(TCP_tests)

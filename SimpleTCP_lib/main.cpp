@@ -1,15 +1,14 @@
-//
-// Created by o.narvatov on 12/10/2024.
-//
-
 #include <iostream>
+#include <string>
+#include <WinSock2.h>
+
+#pragma comment(lib, "ws2_32.lib")
+using namespace std;
 
 #include "Constants.h"
 #include "SimpleTCP.h"
 
-int main()
-{
-    std::cout << "FUCK ME AND YOU BITCH" << std::endl;
+int main() {
     const auto listenPort = std::stoi(getenv(LISTEN_PORT));
     const auto passiveConnection = std::stoi(getenv(PASSIVE_CONNECTION)) != 0;
 
