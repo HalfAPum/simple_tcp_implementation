@@ -11,14 +11,14 @@ with cost of communicating only with clients/servers that know about this struct
 # TODO List
  - [X] Create TCP-User interface
  - [X] Add run config for passive/active servers
- - [] Add IP header processing
- - [] Add UDP header processing
- - [] Add TCP header processing
+ - [X] Add IP header processing
+ - [X] Add UDP header processing
+ - [X] Add TCP header processing
  - [] Add checksum calculator for outgoing packets
  - [] Add checksum verification for incoming packets
- - [] Create listening socket to accept incoming connections
- - [] Successfully send/receive packets
- - [] Create separate socket for each new connection
+ - [X] Create listening socket to accept incoming connections
+ - [X] Successfully send/receive packets
+ - [X] Create separate socket for each new connection
  - [] Manage connections in multithreaded environment
  - [] Create TCP state machine according to RFC 793
  - [] Describe protocol limitations in following sections

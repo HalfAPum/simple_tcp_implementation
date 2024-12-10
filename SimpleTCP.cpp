@@ -105,7 +105,7 @@ void SimpleTCP::listenNewConnections() {
         auto tcbIt = tcbMap.find(tcpHeader.destinationPort);
 
         if (tcbIt == tcbMap.end()) {
-            //TCB does not exist.
+            //TCB does not exist (Connection state is closed).
 
             if (tcpHeader.RST) continue;
 
@@ -141,12 +141,8 @@ void SimpleTCP::listenNewConnections() {
             continue;
         }
 
-        ipv4Header.print();
-        udpHeader.print();
-        tcpHeader.print();
-
         TransmissionControlBlock *tcb = tcbIt->second;
-        tcb->processListeningSocketMessage(ipv4Header, udpHeader, tcpHeader);
+        tcb->processListeningSocketMessage(tcpHeader);
     }
 }
 
@@ -171,6 +167,7 @@ LocalConnection SimpleTCP::open(
             tcb->sendSYN(foreignPort);
             tcbMap.erase(localPort);
             tcbMap.emplace(tcb->localConnection->localPort, tcb);
+            tcb->launchTCBThread();
             mutex_.unlock();
         }
 

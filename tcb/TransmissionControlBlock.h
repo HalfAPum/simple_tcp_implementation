@@ -48,14 +48,15 @@ class TransmissionControlBlock {
     uint32_t rcv_nxt = 0;
     uint32_t irs = 0;
 
-
-    void processSegment(const IPv4Header &receiveIPv4Header, const TCPHeader &receiveTCPHeader);
-
-    void run();
+    void processPacketListenState(const TCPHeader &tcpHeader);
 
     static uint32_t generateISS();
 
     void sendTCPSegment(TCPHeader &sTCPHeader /*add data buffer and it's length later*/);
+
+    bool threadLaunched = false;
+
+    void launchTCBThreadInternal();
 public:
     LocalConnection *localConnection;
     bool passive;
@@ -77,13 +78,11 @@ public:
         delete localConnection;
     }
 
-    void processListeningSocketMessage(
-        const IPv4Header & ipv4Header,
-        const UDPHeader & udpHeader,
-        const TCPHeader & tcpHeader
-    );
+    void processListeningSocketMessage(const TCPHeader & tcpHeader);
 
     void sendSYN(uint16_t foreignPort);
+
+    void launchTCBThread();
 
 };
 

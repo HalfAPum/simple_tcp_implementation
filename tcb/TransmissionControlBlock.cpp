@@ -13,22 +13,47 @@
 #include <ws2tcpip.h>
 
 #include "../facade/TCPFacade.h"
-#include "../Constants.h"
 
-//Could modify local port
-void TransmissionControlBlock::processListeningSocketMessage(
-    const IPv4Header &ipv4Header,
-    const UDPHeader &udpHeader,
-    const TCPHeader &tcpHeader
-) {
-    if (connectionSocket != INVALID_SOCKET) return;
-
-    connectionSocket = localConnection->createLocalSocket(true);
+void TransmissionControlBlock::processPacketListenState(const TCPHeader &tcpHeader) {
     localConnection->createForeignSocketAddress(tcpHeader.sourcePort);
 
+    auto sendHeader = TCPHeader::constructSendTCPHeader(localConnection);
+
+    if (tcpHeader.ACK) {
+        sendHeader.sequenceNumber = tcpHeader.ackNumber;
+        sendHeader.RST = true;
+
+        sendTCPSegment(sendHeader);
+    } else if (tcpHeader.SYN) {
+        rcv_nxt = tcpHeader.sequenceNumber + 1;
+        irs = tcpHeader.sequenceNumber;
+        iss = generateISS();
+        sendHeader.sequenceNumber = iss;
+        sendHeader.ackNumber = rcv_nxt;
+        sendHeader.SYN = true;
+        sendHeader.ACK = true;
+
+        sendTCPSegment(sendHeader);
+
+        snd_nxt = iss + 1;
+        snd_una = iss;
+        state = SYN_RECEIVED;
+
+        launchTCBThread();
+    }
+}
+
+//Could modify local port
+void TransmissionControlBlock::processListeningSocketMessage(const TCPHeader &tcpHeader) {
     assert(state == LISTEN);
 
-    std::cout << "IS SYN??? " << tcpHeader.SYN << std::endl;
+    if (tcpHeader.RST) return;
+
+    if (connectionSocket == INVALID_SOCKET) {
+        connectionSocket = localConnection->createLocalSocket(true);
+    }
+
+    processPacketListenState(tcpHeader);
 }
 
 //Modifies local port
@@ -63,10 +88,6 @@ uint32_t TransmissionControlBlock::generateISS() {
 void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
     unsigned char sendbuf[SEND_TCP_HEADER_LENGTH];
 
-    //temp
-    sTCPHeader.ACK = true;
-    sTCPHeader.ackNumber = sTCPHeader.sequenceNumber + 100;
-
     sTCPHeader.fillSendBuffer(sendbuf);
 
     std::cout << "----------------------------------------------------------------------------" << std::endl;
@@ -80,7 +101,29 @@ void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
     TCPHeader::parseTCPHeader(sendbuf).print();
 
     TCPFacade::send(connectionSocket, sendbuf, SEND_TCP_HEADER_LENGTH, localConnection->foreignSockaddrr);
-    int recv = TCPFacade::receive(connectionSocket, sendbuf, SEND_TCP_HEADER_LENGTH);
-    std::cout<<"LOL? recv " << recv << std::endl;
-    TCPHeader::parseTCPHeader(sendbuf).print();
+}
+
+void TransmissionControlBlock::launchTCBThread() {
+    if (threadLaunched) return;
+
+    threadLaunched = true;
+
+    std::thread thread(&TransmissionControlBlock::launchTCBThreadInternal, this);
+    thread.detach();
+}
+
+void TransmissionControlBlock::launchTCBThreadInternal() {
+    while (true) {
+        unsigned char recvbuf[SEND_TCP_HEADER_LENGTH];
+
+        int packetLength = TCPFacade::receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
+
+        auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
+        recvHeader.print();
+
+        if (state == LISTEN) {
+            processPacketListenState(recvHeader);
+            continue;
+        }
+    }
 }
