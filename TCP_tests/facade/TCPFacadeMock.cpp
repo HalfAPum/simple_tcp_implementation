@@ -6,23 +6,36 @@
 
 #include "Constants.h"
 
-int TCPFacadeMock::receive(const SOCKET socket, unsigned char *buffer, const int bufferLength) {
-    const int packetLength = realFacade->receive(socket, buffer, bufferLength);
-
-    //Ignore non-TCP messages
-    if (packetLength < TCP_SEGMENT_MIN_LENGTH) {
-        const int bufferOffset = getSockType(socket) == SOCK_RAW ? IP_HEADER_LENGTH + UDP_HEADER_LENGTH : 0;
-        receiveMessageQueue.emplace(TCPHeader::parseTCPHeader(buffer + bufferOffset));
-    }
-
-    return packetLength;
-}
-
 void TCPFacadeMock::send(const SOCKET socket, unsigned char *buffer, const int bufferLength, const sockaddr *address) {
     sendMessageQueue.emplace(TCPHeader::parseTCPHeader(buffer));
-
-    realFacade->send(socket, buffer, bufferLength, address);
 }
+
+int TCPFacadeMock::receive(const SOCKET socket, unsigned char *buffer, const int bufferLength) {
+    // const int packetLength = realFacade->receive(socket, buffer, bufferLength);
+
+    while (mutex_.unlock());
+    // const int sockType = getSockType(socket);
+    // int bufferOffset = 0;
+
+    // if (sockType == SOCK_RAW) {
+        // Ignore non-TCP messages
+        // if (packetLength < TCP_SEGMENT_MIN_LENGTH) {
+            // return packetLength;
+        // }
+
+        // bufferOffset = IP_HEADER_LENGTH + UDP_HEADER_LENGTH;
+    // }
+
+    // receiveMessageQueue.emplace(TCPHeader::parseTCPHeader(buffer + bufferOffset));
+
+    // return packetLength;
+}
+
+void TCPFacadeMock::addToReceiveMessageQueue(TCPHeader &tcpHeader) {
+    receiveMessageQueue.emplace(tcpHeader);
+    mutex_.unlock();
+}
+
 
 int TCPFacadeMock::getSockType(const SOCKET socket) {
     int optVal;

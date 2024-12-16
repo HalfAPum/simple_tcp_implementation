@@ -11,15 +11,12 @@
 
 
 class TCPFacadeMock final : public TCPFacade {
-    TCPFacade* realFacade;
-
     static int getSockType(SOCKET socket);
 
+    std::mutex mutex_;
 public:
     std::queue<TCPHeader> receiveMessageQueue {};
     std::queue<TCPHeader> sendMessageQueue {};
-
-    explicit TCPFacadeMock(TCPFacade* _realFacade) : realFacade(_realFacade) {}
 
     void send(
         SOCKET socket,
@@ -33,6 +30,8 @@ public:
         unsigned char* buffer,
         int bufferLength
     ) override;
+
+    void addToReceiveMessageQueue(TCPHeader &tcpHeader);
 
 };
 

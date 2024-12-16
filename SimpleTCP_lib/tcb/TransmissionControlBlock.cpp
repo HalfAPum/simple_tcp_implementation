@@ -98,7 +98,7 @@ void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
     // sTCPHeader.calculateChecksum(sIPv4Header, sendbuf + IP_HEADER_LENGTH);
 
     //DEGUB Verify header
-    TCPHeader::parseTCPHeader(sendbuf).print();
+    // TCPHeader::parseTCPHeader(sendbuf).print();
 
     TCPFacade::singleton->send(connectionSocket, sendbuf, SEND_TCP_HEADER_LENGTH, localConnection->foreignSockaddrr);
 }

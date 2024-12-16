@@ -95,10 +95,6 @@ void SimpleTCP::listenNewConnections() {
         mutex_.lock();
         //Filter calls we make by ourself. Ignore comparing address since we test now only local calls.
         if (auto ownCallIt = tcbMap.find(tcpHeader.sourcePort); ownCallIt != tcbMap.end()) {
-            std::cout << "FILTER?? SP " << tcpHeader.sourcePort << std::endl;
-            for (auto &e: tcbMap) {
-                std::cout << "occupiedLocal " << e.first << std::endl;
-            }
             mutex_.unlock();
             continue;
         }
