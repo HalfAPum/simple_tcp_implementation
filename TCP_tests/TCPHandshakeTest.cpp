@@ -6,11 +6,15 @@
 
 #include "SimpleTCP.h"
 
-TEST_CASE("ExampleDate", "[TCPHandshakeTest]")
- {
-    CHECK(true);
-
+TEST_CASE("TCPHandshakeTest", "Passive") {
     SimpleTCP simpleTcp {};
 
-    CHECK(simpleTcp.initialize());
+    bool initialized = simpleTcp.initialize();
+
+    REQUIRE(initialized);
+
+    auto localConnection = simpleTcp.open();
+
+
+    simpleTcp.close()
 }

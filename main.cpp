@@ -7,8 +7,7 @@
 #include "Constants.h"
 #include "SimpleTCP.h"
 
-int main()
-{
+int main() {
     std::cout << "FUCK ME AND YOU BITCH" << std::endl;
     const auto listenPort = std::stoi(getenv(LISTEN_PORT));
     const auto passiveConnection = std::stoi(getenv(PASSIVE_CONNECTION)) != 0;

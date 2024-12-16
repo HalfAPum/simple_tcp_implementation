@@ -8,7 +8,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(TCP_tests_run TCPHandshakeTest.cpp)
+add_executable(TCP_tests_run TCPHandshakeTest.cpp
+        facade/TCPFacadeMock.cpp
+        facade/TCPFacadeMock.h)
 
 target_link_libraries(TCP_tests_run PRIVATE Catch2::Catch2WithMain)
 

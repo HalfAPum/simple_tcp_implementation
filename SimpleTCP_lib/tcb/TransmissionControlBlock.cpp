@@ -100,7 +100,7 @@ void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
     //DEGUB Verify header
     TCPHeader::parseTCPHeader(sendbuf).print();
 
-    TCPFacade::send(connectionSocket, sendbuf, SEND_TCP_HEADER_LENGTH, localConnection->foreignSockaddrr);
+    TCPFacade::singleton->send(connectionSocket, sendbuf, SEND_TCP_HEADER_LENGTH, localConnection->foreignSockaddrr);
 }
 
 void TransmissionControlBlock::launchTCBThread() {
@@ -116,7 +116,7 @@ void TransmissionControlBlock::launchTCBThreadInternal() {
     while (true) {
         unsigned char recvbuf[SEND_TCP_HEADER_LENGTH];
 
-        int packetLength = TCPFacade::receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
+        int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
 
         auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
         recvHeader.print();

@@ -42,7 +42,9 @@ bool validate(const bool result, const std::string &message) {
     return true;
 }
 
-bool SimpleTCP::initialize() {
+bool SimpleTCP::initialize(TCPFacade* tcpFacade) {
+    TCPFacade::initialize(tcpFacade);
+
     WSAData wsaData = {};
 
     //Initialize winsock
@@ -70,7 +72,7 @@ void SimpleTCP::listenNewConnections() {
     while (true) {
         unsigned char recvbuf[BUFFLEN];
 
-        int packetLength = TCPFacade::receive(listenSocket, recvbuf, BUFFLEN);
+        int packetLength = TCPFacade::singleton->receive(listenSocket, recvbuf, BUFFLEN);
         //Packets are guaranteed to be have IP header since we use SOCK_RAW.
         auto ipv4Header = IPv4Header::parseIPv4Header(recvbuf);
 
@@ -133,7 +135,7 @@ void SimpleTCP::listenNewConnections() {
             auto debug = TCPHeader::parseTCPHeader(sendbuf);
             debug.print();
 
-            TCPFacade::send(rstSocket, sendbuf, SEND_TCP_HEADER_LENGTH, rstConnection->foreignSockaddrr);
+            TCPFacade::singleton->send(rstSocket, sendbuf, SEND_TCP_HEADER_LENGTH, rstConnection->foreignSockaddrr);
 
             closesocket(rstSocket);
             delete rstConnection;

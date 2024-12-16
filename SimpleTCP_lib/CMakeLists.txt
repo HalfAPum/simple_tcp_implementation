@@ -14,6 +14,7 @@ set(HEADER_FILES
         header/udp/UDPHeader.h
         socket/SocketFactory.h
         facade/TCPFacade.h
+        facade/TCPFacadeWin.h
 )
 
 set(SOURCE_FILES
@@ -27,6 +28,7 @@ set(SOURCE_FILES
         header/udp/UDPHeader.cpp
         tcb/LocalConnection.cpp
         socket/SocketFactory.cpp
+        facade/TCPFacadeWin.cpp
         facade/TCPFacade.cpp
 )
 

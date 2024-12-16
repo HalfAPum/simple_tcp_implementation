@@ -12,19 +12,25 @@
  * Primary class resposibility is to send/receive messages and handle corresponding errors.
  */
 struct TCPFacade {
-    static void send(
+    virtual ~TCPFacade() = default;
+
+    virtual void send(
         SOCKET socket,
         unsigned char* buffer,
         int bufferLength,
         const sockaddr* address
-    );
-    static int receive(
+    ) = 0;
+    virtual int receive(
         SOCKET socket,
         unsigned char* buffer,
         int bufferLength
-    );
-};
+    ) = 0;
 
+
+    static TCPFacade* singleton;
+
+    static TCPFacade *initialize(TCPFacade* other);
+};
 
 
 #endif //TCPFACADE_H

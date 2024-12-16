@@ -11,6 +11,8 @@
 #include "Constants.h"
 #include "tcb/LocalConnection.h"
 #include "ReceiveParams.h"
+#include "facade/TCPFacade.h"
+#include "facade/TCPFacadeWin.h"
 #include "tcb/TransmissionControlBlock.h"
 
 constexpr unsigned DEFAULT_TIMEOUT = 5 * 60 * 1000;
@@ -25,7 +27,7 @@ class SimpleTCP {
 
     void listenNewConnections();
 public:
-    bool initialize();
+    bool initialize(TCPFacade* tcpFacade = new TCPFacadeWin());
 
     LocalConnection open(
         uint16_t localPort,
