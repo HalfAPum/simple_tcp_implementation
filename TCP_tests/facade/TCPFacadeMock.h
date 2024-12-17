@@ -4,6 +4,7 @@
 
 #ifndef TCPFACADEMOCK_H
 #define TCPFACADEMOCK_H
+#include <atomic>
 #include <queue>
 
 #include "facade/TCPFacade.h"
@@ -11,13 +12,13 @@
 
 
 class TCPFacadeMock final : public TCPFacade {
-    static int getSockType(SOCKET socket);
-
-    std::mutex mutex_;
-public:
-    std::queue<TCPHeader> receiveMessageQueue {};
+    std::queue<std::pair<unsigned char*, int>> receiveMessageQueue {};
     std::queue<TCPHeader> sendMessageQueue {};
 
+    //Block all Mock actions by default
+    std::atomic<bool> blockReceiveAdd { true };
+    std::atomic<bool> blockSendPop { true };
+public:
     void send(
         SOCKET socket,
         unsigned char* buffer,
@@ -31,7 +32,8 @@ public:
         int bufferLength
     ) override;
 
-    void addToReceiveMessageQueue(TCPHeader &tcpHeader);
+    void addToReceiveMessageQueue(const TCPHeader &tcpHeader, bool addUDPIPHeaders = false);
+    TCPHeader popFromSendSendMessageQueue();
 
 };
 

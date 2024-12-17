@@ -8,49 +8,59 @@
 
 void TCPFacadeMock::send(const SOCKET socket, unsigned char *buffer, const int bufferLength, const sockaddr *address) {
     sendMessageQueue.emplace(TCPHeader::parseTCPHeader(buffer));
+    blockSendPop = false;
 }
 
 int TCPFacadeMock::receive(const SOCKET socket, unsigned char *buffer, const int bufferLength) {
-    // const int packetLength = realFacade->receive(socket, buffer, bufferLength);
+    //TODO this is done only for listening thread upgrade it when start testing at least one socket connection or more.
+    while (blockReceiveAdd) {
+        Sleep(0);
+    }
 
-    while (mutex_.unlock());
-    // const int sockType = getSockType(socket);
-    // int bufferOffset = 0;
+    blockReceiveAdd = true;
 
-    // if (sockType == SOCK_RAW) {
-        // Ignore non-TCP messages
-        // if (packetLength < TCP_SEGMENT_MIN_LENGTH) {
-            // return packetLength;
-        // }
+    const auto receiveMessage = receiveMessageQueue.front();
+    receiveMessageQueue.pop();
 
-        // bufferOffset = IP_HEADER_LENGTH + UDP_HEADER_LENGTH;
-    // }
+    const auto receiveBuffer = receiveMessage.first;
+    const auto receiveBufferSize = receiveMessage.second;
 
-    // receiveMessageQueue.emplace(TCPHeader::parseTCPHeader(buffer + bufferOffset));
+    printf("FUCK DO IT FOR BUFF SIZE");
+    printf(std::to_string(receiveBufferSize).c_str());
+    for (int i = 0; i < receiveBufferSize; ++i) {
+        buffer[i] = receiveBuffer[i];
+    }
 
-    // return packetLength;
+    return receiveBufferSize;
 }
 
-void TCPFacadeMock::addToReceiveMessageQueue(TCPHeader &tcpHeader) {
-    receiveMessageQueue.emplace(tcpHeader);
-    mutex_.unlock();
+void TCPFacadeMock::addToReceiveMessageQueue(const TCPHeader &tcpHeader, const bool addUDPIPHeaders) {
+    unsigned char buffer[BUFFLEN] {};
+
+    int offset = 0;
+
+    if (addUDPIPHeaders) {
+        IPv4Header::constructSendIPv4Header().fillSendBuffer(buffer);
+        offset += IP_HEADER_LENGTH;
+        //Ignore UDP info it's not used now anyway
+        offset += UDP_HEADER_LENGTH;
+    }
+
+    tcpHeader.fillSendBuffer(buffer + offset);
+
+    receiveMessageQueue.emplace(buffer, offset + SEND_TCP_HEADER_LENGTH);
+    blockReceiveAdd = false;
 }
 
+TCPHeader TCPFacadeMock::popFromSendSendMessageQueue() {
+    while (blockSendPop) {
+        Sleep(0);
+    }
 
-int TCPFacadeMock::getSockType(const SOCKET socket) {
-    int optVal;
-    int optLen = sizeof(int);
+    blockSendPop = true;
 
-    getsockopt(
-        socket,
-        SOL_SOCKET,
-        SO_TYPE,
-        reinterpret_cast<char *>(&optVal),
-        &optLen
-    );
+    auto front = sendMessageQueue.front();
+    sendMessageQueue.pop();
 
-    printf(std::to_string(optVal).c_str());
-    return optVal;
+    return front;
 }
-
-

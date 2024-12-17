@@ -7,6 +7,7 @@
 
 #include "SimpleTCP.h"
 #include "facade/TCPFacadeMock.h"
+#include "header/tcp/TCPHeaderTestUtils.h"
 
 constexpr int PASSIVE_LOCAL_PORT = 8080;
 constexpr int ACTIVE_LOCAL_PORT = 9080;
@@ -25,29 +26,30 @@ TEST_CASE("TCP_handshake_test", "[Passive]") {
 
     auto localConnection = simpleTcp.open(PASSIVE_LOCAL_PORT);
 
-    auto &receiveQueue = mockFacade->receiveMessageQueue;
-    auto &sendQueue = mockFacade->sendMessageQueue;
 
     SECTION("New connection for closed port") {
-        simpleTcp.open(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT_CLOSED, false);
+        TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT_CLOSED);
 
-        TCPHeader receiveTCPHeader = receiveQueue.front();
-        receiveQueue.pop();
+        auto synHeader = tcpHeaderTestUtils.createHeader(TransmissionControlBlock::generateISS());
+        synHeader.SYN = true;
 
-        REQUIRE(receiveTCPHeader.SYN);
-        REQUIRE(receiveTCPHeader.destinationPort != PASSIVE_LOCAL_PORT);
+        mockFacade->addToReceiveMessageQueue(synHeader, true);
 
-        TCPHeader sendTCPHeader = sendQueue.front();
-        sendQueue.pop();
+        TCPHeader sendTCPHeader = mockFacade->popFromSendSendMessageQueue();
 
-        SECTION("ACK bit is ON") {
-            REQUIRE(sendTCPHeader.ACK);
-            REQUIRE(sendTCPHeader.sequenceNumber == receiveTCPHeader.ackNumber);
-        }
-
-        // SECTION("ACK bit is OFF") {
-        //
+        // SECTION("ACK bit is ON") {
+        //     REQUIRE(sendTCPHeader.ACK);
+        //     REQUIRE(sendTCPHeader.sequenceNumber == receiveTCPHeader.ackNumber);
         // }
+
+        SECTION("ACK bit is OFF") {
+            REQUIRE(sendTCPHeader.ACK);
+            REQUIRE(sendTCPHeader.RST);
+
+            REQUIRE(sendTCPHeader.sequenceNumber == 0);
+            auto segLen = SEND_TCP_HEADER_LENGTH - synHeader.getDataOffsetBytes();
+            REQUIRE(sendTCPHeader.ackNumber == synHeader.sequenceNumber + segLen);
+        }
     }
 
     delete mockFacade;

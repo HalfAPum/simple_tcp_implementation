@@ -183,7 +183,7 @@ void TCPHeader::calculateChecksum(const IPv4Header &ipv4Header, unsigned char* s
     sum += ipv4Header.sourceIPAddress & 0xFFFF;
     sum += ipv4Header.destinationIPAddress >> 16 & 0xFFFF;
     sum += ipv4Header.destinationIPAddress & 0xFFFF;
-    sum += IPv4_TCP_PROTOCOL & 0xFFFF;
+    // sum += IPv4_TCP_PROTOCOL & 0xFFFF;
     //TODO UPDATE WHEN SEND DATA
     sum += SEND_TCP_HEADER_LENGTH & 0xFFFF;
 

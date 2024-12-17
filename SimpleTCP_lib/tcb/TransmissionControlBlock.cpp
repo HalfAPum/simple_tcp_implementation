@@ -113,17 +113,19 @@ void TransmissionControlBlock::launchTCBThread() {
 }
 
 void TransmissionControlBlock::launchTCBThreadInternal() {
-    while (true) {
-        unsigned char recvbuf[SEND_TCP_HEADER_LENGTH];
+    //TODO COMMENTED NO TO DISCUPT UNIT-TESTING WITH SINGLE THREAD RECEIVER
 
-        int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
-
-        auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
-        recvHeader.print();
-
-        if (state == LISTEN) {
-            processPacketListenState(recvHeader);
-            continue;
-        }
-    }
+    // while (true) {
+    //     unsigned char recvbuf[SEND_TCP_HEADER_LENGTH];
+    //
+    //     int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
+    //
+    //     auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
+    //     recvHeader.print();
+    //
+    //     if (state == LISTEN) {
+    //         processPacketListenState(recvHeader);
+    //         continue;
+    //     }
+    // }
 }
