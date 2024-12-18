@@ -30,25 +30,33 @@ TEST_CASE("TCP_handshake_test", "[Passive]") {
     SECTION("New connection for closed port") {
         TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT_CLOSED);
 
-        auto synHeader = tcpHeaderTestUtils.createHeader(TransmissionControlBlock::generateISS());
+        auto synHeader = tcpHeaderTestUtils.createHeader();
+        synHeader.sequenceNumber = TransmissionControlBlock::generateISS();
         synHeader.SYN = true;
 
-        mockFacade->addToReceiveMessageQueue(synHeader, true);
-
-        TCPHeader sendTCPHeader = mockFacade->popFromSendSendMessageQueue();
-
-        // SECTION("ACK bit is ON") {
-        //     REQUIRE(sendTCPHeader.ACK);
-        //     REQUIRE(sendTCPHeader.sequenceNumber == receiveTCPHeader.ackNumber);
-        // }
-
         SECTION("ACK bit is OFF") {
+            synHeader.ACK = false;
+
+            mockFacade->addToReceiveMessageQueue(synHeader, true);
+            TCPHeader sendTCPHeader = mockFacade->popFromSendSendMessageQueue();
+
             REQUIRE(sendTCPHeader.ACK);
             REQUIRE(sendTCPHeader.RST);
 
             REQUIRE(sendTCPHeader.sequenceNumber == 0);
             auto segLen = SEND_TCP_HEADER_LENGTH - synHeader.getDataOffsetBytes();
             REQUIRE(sendTCPHeader.ackNumber == synHeader.sequenceNumber + segLen);
+        }
+
+        SECTION("ACK bit is ON") {
+            synHeader.ACK = true;
+            synHeader.ackNumber = 123456;
+
+            mockFacade->addToReceiveMessageQueue(synHeader, true);
+            TCPHeader sendTCPHeader = mockFacade->popFromSendSendMessageQueue();
+
+            REQUIRE(sendTCPHeader.RST);
+            REQUIRE(sendTCPHeader.sequenceNumber == synHeader.ackNumber);
         }
     }
 

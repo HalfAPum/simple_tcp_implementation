@@ -19,7 +19,7 @@ public:
         localConnection->foreignPort = _destinationPort;
     }
 
-    [[nodiscard]] TCPHeader createHeader(uint32_t sequenceNumber = 0, uint32_t ackNumber = 0) const;
+    [[nodiscard]] TCPHeader createHeader() const;
 
     static void validate(TCPHeader &expectedHeader, TCPHeader &realHeader);
 

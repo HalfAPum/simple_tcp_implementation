@@ -6,11 +6,8 @@
 
 #include "tcb/LocalConnection.h"
 
-TCPHeader TCPHeaderTestUtils::createHeader(const uint32_t sequenceNumber, const uint32_t ackNumber) const {
+TCPHeader TCPHeaderTestUtils::createHeader() const {
     TCPHeader tcpHeader = TCPHeader::constructSendTCPHeader(localConnection);
-
-    tcpHeader.sequenceNumber = sequenceNumber;
-    tcpHeader.ackNumber = ackNumber;
 
     return tcpHeader;
 }

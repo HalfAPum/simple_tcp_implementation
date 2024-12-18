@@ -8,9 +8,7 @@
 TCPFacade* TCPFacade::singleton = nullptr;
 
 TCPFacade *TCPFacade::initialize(TCPFacade *other) {
-    if (singleton == nullptr){
-        singleton = other;
-    }
+    singleton = other;
 
     return singleton;
 }
