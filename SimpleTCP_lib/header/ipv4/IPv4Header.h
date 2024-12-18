@@ -30,10 +30,6 @@ struct IPv4Header {
 
     void print() const;
 
-    static IPv4Header constructSendIPv4Header();
-
-    void fillSendBuffer(unsigned char* sendbuf) const;
-
 };
 
 #endif //IPV4HEADER_H

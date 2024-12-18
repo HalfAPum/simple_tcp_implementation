@@ -5,6 +5,7 @@
 #include "TCPFacadeMock.h"
 
 #include "Constants.h"
+#include "../header/ipv4/IPv4HeaderMock.h"
 
 void TCPFacadeMock::send(const SOCKET socket, unsigned char *buffer, const int bufferLength, const sockaddr *address) {
     sendMessageQueue.emplace(TCPHeader::parseTCPHeader(buffer));
@@ -40,7 +41,7 @@ void TCPFacadeMock::addToReceiveMessageQueue(const TCPHeader &tcpHeader, const b
     int offset = 0;
 
     if (addUDPIPHeaders) {
-        IPv4Header::constructSendIPv4Header().fillSendBuffer(buffer);
+        IPv4HeaderMock::fillSendBuffer(buffer);
         offset += IP_HEADER_LENGTH;
         //Ignore UDP info it's not used now anyway
         offset += UDP_HEADER_LENGTH;
