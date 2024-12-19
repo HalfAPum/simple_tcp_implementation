@@ -206,6 +206,13 @@ void TCPHeader::calculateChecksum(const IPv4Header &ipv4Header, unsigned char* s
     ByteInserter::insert16BitInt(sendbuf + 16, sum);
 }
 
-int TCPHeader::getDataOffsetBytes() {
+int TCPHeader::getDataOffsetBytes() const {
     return dataOffset * DATA_OFFSET_WORD_LENGTH;
 }
+
+//Usually effective enough to verify the headers are the same.
+bool TCPHeader::operator==(const TCPHeader &other) const {
+    return sourcePort == other.sourcePort && destinationPort == other.destinationPort
+    && sequenceNumber == other.sequenceNumber && ackNumber == other.ackNumber;
+}
+

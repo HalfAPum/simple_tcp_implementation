@@ -21,7 +21,7 @@ public:
 
     [[nodiscard]] TCPHeader createHeader() const;
 
-    static void validate(TCPHeader &expectedHeader, TCPHeader &realHeader);
+    static TCPHeader noHeader() ;
 
     ~TCPHeaderTestUtils() {
         delete localConnection;

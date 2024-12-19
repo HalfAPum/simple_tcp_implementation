@@ -54,7 +54,9 @@ struct TCPHeader {
 
     void calculateChecksum(const IPv4Header &ipv4Header, unsigned char* sendbuf);
 
-    int getDataOffsetBytes();
+    [[nodiscard]] int getDataOffsetBytes() const;
+
+    bool operator==(const TCPHeader &other) const;
 };
 
 

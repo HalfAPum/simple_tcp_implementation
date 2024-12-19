@@ -6,6 +6,7 @@
 
 #include "Constants.h"
 #include "../header/ipv4/IPv4HeaderMock.h"
+#include "../header/tcp/TCPHeaderTestUtils.h"
 
 void TCPFacadeMock::send(const SOCKET socket, unsigned char *buffer, const int bufferLength, const sockaddr *address) {
     sendMessageQueue.emplace(TCPHeader::parseTCPHeader(buffer));
@@ -54,8 +55,15 @@ void TCPFacadeMock::addToReceiveMessageQueue(const TCPHeader &tcpHeader, const b
 }
 
 TCPHeader TCPFacadeMock::popFromSendSendMessageQueue() {
+    int cnt = 0;
     while (blockSendPop) {
-        Sleep(0);
+        if (cnt > 2) {
+            //No message arrived.
+            return TCPHeaderTestUtils::noHeader();
+        }
+
+        Sleep(10);
+        cnt++;
     }
 
     blockSendPop = true;

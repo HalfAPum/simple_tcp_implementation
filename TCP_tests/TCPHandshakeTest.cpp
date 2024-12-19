@@ -14,7 +14,24 @@ constexpr int ACTIVE_LOCAL_PORT = 9080;
 constexpr int ACTIVE_FOREIGN_PORT = PASSIVE_LOCAL_PORT;
 constexpr int ACTIVE_FOREIGN_PORT_CLOSED = PASSIVE_LOCAL_PORT + 1;
 
+//Use it when value doesn't actually matter but should be present for test
+constexpr int ANY_NUMBER = 123456;
 
+void doAckBitOnTest(TCPHeader &mockHeader, TCPFacadeMock *mockFacade) {
+    mockHeader.ACK = true;
+    mockHeader.ackNumber = ANY_NUMBER;
+
+    mockFacade->addToReceiveMessageQueue(mockHeader, true);
+    TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+    REQUIRE(implHeader.RST);
+    REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
+}
+
+/**
+ * This TEST_CASE covers all possible communication scenarious between TCP's
+ * until the connection is etablished.
+ */
 TEST_CASE("TCP_handshake_test", "[Passive]") {
     auto* mockFacade = new TCPFacadeMock();
 
@@ -24,39 +41,62 @@ TEST_CASE("TCP_handshake_test", "[Passive]") {
 
     REQUIRE(initialized);
 
-    auto localConnection = simpleTcp.open(PASSIVE_LOCAL_PORT);
-
-
-    SECTION("New connection for closed port") {
+    SECTION("Send segment for CLOSED port") {
         TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT_CLOSED);
 
-        auto synHeader = tcpHeaderTestUtils.createHeader();
-        synHeader.sequenceNumber = TransmissionControlBlock::generateISS();
-        synHeader.SYN = true;
+        auto mockHeader = tcpHeaderTestUtils.createHeader();
 
         SECTION("ACK bit is OFF") {
-            synHeader.ACK = false;
+            mockHeader.ACK = false;
+            mockHeader.sequenceNumber = ANY_NUMBER;
 
-            mockFacade->addToReceiveMessageQueue(synHeader, true);
-            TCPHeader sendTCPHeader = mockFacade->popFromSendSendMessageQueue();
+            mockFacade->addToReceiveMessageQueue(mockHeader, true);
+            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
 
-            REQUIRE(sendTCPHeader.ACK);
-            REQUIRE(sendTCPHeader.RST);
+            REQUIRE(implHeader.ACK);
+            REQUIRE(implHeader.RST);
 
-            REQUIRE(sendTCPHeader.sequenceNumber == 0);
-            auto segLen = SEND_TCP_HEADER_LENGTH - synHeader.getDataOffsetBytes();
-            REQUIRE(sendTCPHeader.ackNumber == synHeader.sequenceNumber + segLen);
+            REQUIRE(implHeader.sequenceNumber == 0);
+            auto segLen = SEND_TCP_HEADER_LENGTH - mockHeader.getDataOffsetBytes();
+            REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + segLen);
         }
 
         SECTION("ACK bit is ON") {
-            synHeader.ACK = true;
-            synHeader.ackNumber = 123456;
+            doAckBitOnTest(mockHeader, mockFacade);
+        }
+    }
 
-            mockFacade->addToReceiveMessageQueue(synHeader, true);
-            TCPHeader sendTCPHeader = mockFacade->popFromSendSendMessageQueue();
+    auto localConnection = simpleTcp.open(PASSIVE_LOCAL_PORT);
 
-            REQUIRE(sendTCPHeader.RST);
-            REQUIRE(sendTCPHeader.sequenceNumber == synHeader.ackNumber);
+    SECTION("Send segment for LISTEN port") {
+        TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT);
+
+        auto mockHeader = tcpHeaderTestUtils.createHeader();
+
+        SECTION("RST bit is ON") {
+            mockHeader.RST = true;
+
+            mockFacade->addToReceiveMessageQueue(mockHeader, true);
+            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+            REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+        }
+
+        SECTION("ACK bit is ON") {
+            doAckBitOnTest(mockHeader, mockFacade);
+        }
+
+        SECTION("SYN bit is ON") {
+            mockHeader.SYN = true;
+            mockHeader.sequenceNumber = TransmissionControlBlock::generateISS();
+
+            mockFacade->addToReceiveMessageQueue(mockHeader, true);
+            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+            REQUIRE(implHeader.SYN);
+            REQUIRE(implHeader.ACK);
+
+            REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + 1);
         }
     }
 

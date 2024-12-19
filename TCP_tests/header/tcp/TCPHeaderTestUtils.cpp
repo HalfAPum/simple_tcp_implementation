@@ -7,7 +7,18 @@
 #include "tcb/LocalConnection.h"
 
 TCPHeader TCPHeaderTestUtils::createHeader() const {
-    TCPHeader tcpHeader = TCPHeader::constructSendTCPHeader(localConnection);
+    auto tcpHeader = TCPHeader::constructSendTCPHeader(localConnection);
 
     return tcpHeader;
 }
+
+TCPHeader TCPHeaderTestUtils::noHeader() {
+    const auto lc = new LocalConnection(0,0);
+
+    auto tcpHeader = TCPHeader::constructSendTCPHeader(lc);
+
+    delete lc;
+
+    return tcpHeader;
+}
+
