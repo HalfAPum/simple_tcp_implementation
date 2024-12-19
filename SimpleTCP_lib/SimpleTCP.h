@@ -26,6 +26,8 @@ class SimpleTCP {
     std::mutex mutex_;
 
     void listenNewConnections();
+
+    std::string errorMessage = "No error";
 public:
     bool initialize(TCPFacade* tcpFacade = new TCPFacadeWin());
 
@@ -79,6 +81,7 @@ public:
 
     void abort(const LocalConnection &localConnection);
 
+    std::string getErrorMessage();
 };
 
 

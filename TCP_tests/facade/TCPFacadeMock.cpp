@@ -22,13 +22,15 @@ int TCPFacadeMock::receive(const SOCKET socket, unsigned char *buffer, const int
     blockReceiveAdd = true;
 
     const auto receiveMessage = receiveMessageQueue.front();
+    if (getSockType(socket) == SOCK_RAW && receiveMessage.second.ignoreRawSock) {
+        blockReceiveAdd = false;
+        return 0;
+    }
     receiveMessageQueue.pop();
 
     const auto receiveBuffer = receiveMessage.first;
-    const auto receiveBufferSize = receiveMessage.second;
+    const auto receiveBufferSize = receiveMessage.second.bufferSize;
 
-    printf("FUCK DO IT FOR BUFF SIZE");
-    printf(std::to_string(receiveBufferSize).c_str());
     for (int i = 0; i < receiveBufferSize; ++i) {
         buffer[i] = receiveBuffer[i];
     }
@@ -36,12 +38,12 @@ int TCPFacadeMock::receive(const SOCKET socket, unsigned char *buffer, const int
     return receiveBufferSize;
 }
 
-void TCPFacadeMock::addToReceiveMessageQueue(const TCPHeader &tcpHeader, const bool addUDPIPHeaders) {
+void TCPFacadeMock::addToReceiveMessageQueue(const TCPHeader &tcpHeader, const bool toRawSock) {
     unsigned char buffer[BUFFLEN] {};
 
     int offset = 0;
 
-    if (addUDPIPHeaders) {
+    if (toRawSock) {
         IPv4HeaderMock::fillSendBuffer(buffer);
         offset += IP_HEADER_LENGTH;
         //Ignore UDP info it's not used now anyway
@@ -50,7 +52,7 @@ void TCPFacadeMock::addToReceiveMessageQueue(const TCPHeader &tcpHeader, const b
 
     tcpHeader.fillSendBuffer(buffer + offset);
 
-    receiveMessageQueue.emplace(buffer, offset + SEND_TCP_HEADER_LENGTH);
+    receiveMessageQueue.emplace(buffer, TCPHeaderMockParams(offset + SEND_TCP_HEADER_LENGTH, !toRawSock));
     blockReceiveAdd = false;
 }
 
@@ -72,4 +74,20 @@ TCPHeader TCPFacadeMock::popFromSendSendMessageQueue() {
     sendMessageQueue.pop();
 
     return front;
+}
+
+int TCPFacadeMock::getSockType(const SOCKET socket) {
+    int optVal;
+    int optLen = sizeof(int);
+
+    getsockopt(
+        socket,
+        SOL_SOCKET,
+        SO_TYPE,
+        reinterpret_cast<char *>(&optVal),
+        &optLen
+    );
+
+    printf(std::to_string(optVal).c_str());
+    return optVal;
 }

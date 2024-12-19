@@ -30,6 +30,7 @@ set(SOURCE_FILES
         socket/SocketFactory.cpp
         facade/TCPFacadeWin.cpp
         facade/TCPFacade.cpp
+        TCPErrorMessages.h
 )
 
 add_library(SimpleTCP_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})

@@ -16,7 +16,8 @@ add_executable(TCP_tests_run TCPHandshakeTest.cpp
         header/tcp/TCPHeaderTestUtils.h
         header/ipv4/IPv4HeaderMock.cpp
         header/ipv4/IPv4HeaderMock.h
-        header/ipv4/IPv4HeaderMock.h)
+        header/ipv4/IPv4HeaderMock.h
+        header/tcp/TCPHeaderMockParams.h)
 
 target_link_libraries(TCP_tests_run PRIVATE Catch2::Catch2WithMain)
 

@@ -127,9 +127,6 @@ void SimpleTCP::listenNewConnections() {
             }
 
             rstHeader.fillSendBuffer(sendbuf);
-            std::cout << "SEND RST PACKET " << std::endl;
-            auto debug = TCPHeader::parseTCPHeader(sendbuf);
-            debug.print();
 
             TCPFacade::singleton->send(rstSocket, sendbuf, SEND_TCP_HEADER_LENGTH, rstConnection->foreignSockaddrr);
 
@@ -235,4 +232,8 @@ ReceiveParams SimpleTCP::receive(
     }
 
     //TODO
+}
+
+std::string SimpleTCP::getErrorMessage() {
+    return errorMessage;
 }
