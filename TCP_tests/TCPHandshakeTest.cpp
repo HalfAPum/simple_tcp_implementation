@@ -39,11 +39,8 @@ void doSegAckInvalidTest(const uint32_t ackNumber ,TCPHeader &mockHeader, TCPFac
     REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
 }
 
-/**
- * This TEST_CASE covers all possible communication scenarious between TCP's
- * until the connection is etablished.
- */
-TEST_CASE("TCP_handshake_test") {
+
+TEST_CASE("TCB_Closed") {
     auto* mockFacade = new TCPFacadeMock();
 
     SimpleTCP simpleTcp {};
@@ -76,6 +73,18 @@ TEST_CASE("TCP_handshake_test") {
             doAckBitOnTest(mockHeader, mockFacade);
         }
     }
+
+    delete mockFacade;
+}
+
+TEST_CASE("TCB_Listen") {
+    auto* mockFacade = new TCPFacadeMock();
+
+    SimpleTCP simpleTcp {};
+
+    bool initialized = simpleTcp.initialize(mockFacade);
+
+    REQUIRE(initialized);
 
     SECTION("Send segment for LISTEN TCB") {
         auto localConnection = simpleTcp.open(PASSIVE_LOCAL_PORT);
@@ -110,6 +119,18 @@ TEST_CASE("TCP_handshake_test") {
             REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + 1);
         }
     }
+
+    delete mockFacade;
+}
+
+TEST_CASE("TCB_SynSent") {
+    auto* mockFacade = new TCPFacadeMock();
+
+    SimpleTCP simpleTcp {};
+
+    bool initialized = simpleTcp.initialize(mockFacade);
+
+    REQUIRE(initialized);
 
     SECTION("Receive segment from SYN-SENT TCB") {
         auto localConnection = simpleTcp.open(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT, false);
