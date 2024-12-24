@@ -13,6 +13,7 @@
 #include <thread>
 
 #include "Constants.h"
+#include "TCPErrorMessages.h"
 #include "facade/base/TCPFacade.h"
 #include "message/TCPMessageStateMachineImpl.h"
 #include "socket/base/SocketFactory.h"
@@ -139,6 +140,8 @@ ReceiveParams SimpleTCP::receive(
 
     //TODO
 }
+
+std::string SimpleTCP::errorMessage = tcpError::NO_ERROR_M;
 
 std::string SimpleTCP::getErrorMessage() {
     return errorMessage;

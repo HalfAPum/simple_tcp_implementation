@@ -29,7 +29,7 @@ class SimpleTCP {
 
     void listenNewConnections();
 
-    std::string errorMessage = "No error";
+    static std::string errorMessage;
 public:
     bool initialize(
         TCPMessageStateMachine* tcpMessageStateMachine = new TCPMessageStateMachineImpl(),
@@ -87,7 +87,7 @@ public:
 
     void abort(const LocalConnection &localConnection);
 
-    std::string getErrorMessage();
+    static std::string getErrorMessage();
 };
 
 

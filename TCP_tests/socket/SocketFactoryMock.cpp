@@ -5,9 +5,9 @@
 #include "SocketFactoryMock.h"
 
 SOCKET SocketFactoryMock::createUDPSocket(int type, bool bindPort, uint16_t port) {
-    return 0;
+    return 1;
 }
 
 uint16_t SocketFactoryMock::getSocketPort(SOCKET socket) {
-    return 0;
+    return 1;
 }

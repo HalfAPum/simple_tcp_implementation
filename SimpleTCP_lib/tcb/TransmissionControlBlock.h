@@ -14,7 +14,12 @@
 
 
 class TransmissionControlBlock {
+    void sendTCPSegment(TCPHeader &sTCPHeader /*add data buffer and it's length later*/);
 
+    bool threadLaunched = false;
+
+    void launchTCBThreadInternal();
+public:
     // Send Sequence Variables
     //
     //   SND.UNA - send unacknowledged
@@ -48,12 +53,6 @@ class TransmissionControlBlock {
     uint32_t rcv_nxt = 0;
     uint32_t irs = 0;
 
-    void sendTCPSegment(TCPHeader &sTCPHeader /*add data buffer and it's length later*/);
-
-    bool threadLaunched = false;
-
-    void launchTCBThreadInternal();
-public:
     LocalConnection *localConnection;
     bool passive;
     const unsigned timeout;

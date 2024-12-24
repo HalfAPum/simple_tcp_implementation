@@ -5,6 +5,7 @@
 #include "TCPFacadeMock.h"
 
 #include "Constants.h"
+#include "../TestConstants.h"
 #include "../header/ipv4/IPv4HeaderMock.h"
 #include "../header/tcp/TCPHeaderTestUtils.h"
 
@@ -13,6 +14,11 @@ void TCPFacadeMock::send(const SOCKET socket, unsigned char *buffer, const int b
 }
 
 int TCPFacadeMock::receive(const SOCKET socket, unsigned char *buffer, const int bufferLength) {
+    //Prohibit receiving for sockets Created not in test code directly
+    if (socket != TEST_SOCKET) {
+        throw std::exception();
+    }
+
     const auto receiveMessage = receiveMessageQueue.front();
     receiveMessageQueue.pop();
 
