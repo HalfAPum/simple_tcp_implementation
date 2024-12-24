@@ -48,8 +48,6 @@ class TransmissionControlBlock {
     uint32_t rcv_nxt = 0;
     uint32_t irs = 0;
 
-    void processPacketListenState(const TCPHeader &tcpHeader);
-
     void sendTCPSegment(TCPHeader &sTCPHeader /*add data buffer and it's length later*/);
 
     bool threadLaunched = false;
@@ -83,6 +81,8 @@ public:
     void launchTCBThread();
 
     static uint32_t generateISS();
+
+    void processPacketListenState(const TCPHeader &tcpHeader);
 };
 
 

@@ -13,8 +13,10 @@ set(HEADER_FILES
         Constants.h
         header/udp/UDPHeader.h
         socket/SocketFactory.h
-        facade/TCPFacade.h
+        facade/base/TCPFacade.h
         facade/TCPFacadeWin.h
+        message/TCPMessageStateMachineImpl.h
+        message/base/TCPMessageStateMachine.h
 )
 
 set(SOURCE_FILES
@@ -29,8 +31,12 @@ set(SOURCE_FILES
         tcb/LocalConnection.cpp
         socket/SocketFactory.cpp
         facade/TCPFacadeWin.cpp
-        facade/TCPFacade.cpp
+        facade/base/TCPFacade.cpp
         TCPErrorMessages.h
+        message/TCPMessageStateMachineImpl.cpp
+        message/TCPMessageStateMachineImpl.h
+        message/base/TCPMessageStateMachine.cpp
+        message/base/TCPMessageStateMachine.h
 )
 
 add_library(SimpleTCP_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})

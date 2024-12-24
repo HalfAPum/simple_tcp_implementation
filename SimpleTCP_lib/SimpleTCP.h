@@ -11,8 +11,10 @@
 #include "Constants.h"
 #include "tcb/LocalConnection.h"
 #include "ReceiveParams.h"
-#include "facade/TCPFacade.h"
 #include "facade/TCPFacadeWin.h"
+#include "facade/base/TCPFacade.h"
+#include "message/TCPMessageStateMachineImpl.h"
+#include "message/base/TCPMessageStateMachine.h"
 #include "tcb/TransmissionControlBlock.h"
 
 constexpr unsigned DEFAULT_TIMEOUT = 5 * 60 * 1000;
@@ -23,13 +25,14 @@ class SimpleTCP {
     //Local port to TCB
     std::unordered_map<uint16_t, TransmissionControlBlock*> tcbMap {};
 
-    std::mutex mutex_;
-
     void listenNewConnections();
 
     std::string errorMessage = "No error";
 public:
-    bool initialize(TCPFacade* tcpFacade = new TCPFacadeWin());
+    bool initialize(
+        TCPMessageStateMachine* tcpMessageStateMachine = new TCPMessageStateMachineImpl(),
+        TCPFacade* tcpFacade = new TCPFacadeWin()
+    );
 
     LocalConnection open(
         uint16_t localPort,

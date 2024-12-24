@@ -12,7 +12,8 @@
 #include <random>
 #include <ws2tcpip.h>
 
-#include "../facade/TCPFacade.h"
+#include "facade/base/TCPFacade.h"
+#include "message/base/TCPMessageStateMachine.h"
 
 void TransmissionControlBlock::processPacketListenState(const TCPHeader &tcpHeader) {
     localConnection->createForeignSocketAddress(tcpHeader.sourcePort);
@@ -114,16 +115,6 @@ void TransmissionControlBlock::launchTCBThread() {
 
 void TransmissionControlBlock::launchTCBThreadInternal() {
     while (true) {
-        unsigned char recvbuf[SEND_TCP_HEADER_LENGTH];
-
-        int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
-
-        auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
-        recvHeader.print();
-
-        if (state == LISTEN) {
-            processPacketListenState(recvHeader);
-            continue;
-        }
+        TCPMessageStateMachine::singleton->processUDPMessage(connectionSocket, this);
     }
 }
