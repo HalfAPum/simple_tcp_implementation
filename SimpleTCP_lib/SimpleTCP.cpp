@@ -15,7 +15,7 @@
 #include "Constants.h"
 #include "facade/base/TCPFacade.h"
 #include "message/TCPMessageStateMachineImpl.h"
-#include "socket/SocketFactory.h"
+#include "socket/base/SocketFactory.h"
 
 constexpr auto LISTEN_THREAD_NAME = "LISTEN_THREAD";
 
@@ -29,9 +29,14 @@ bool checkResultFail(const bool result, const std::string &actionName, const SOC
     return true;
 }
 
-bool SimpleTCP::initialize(TCPMessageStateMachine *tcpMessageStateMachine, TCPFacade *tcpFacade) {
+bool SimpleTCP::initialize(
+    TCPMessageStateMachine *tcpMessageStateMachine,
+    TCPFacade *tcpFacade,
+    SocketFactory* socketFactory
+) {
     TCPMessageStateMachine::initialize(tcpMessageStateMachine);
     TCPFacade::initialize(tcpFacade);
+    SocketFactory::initialize(socketFactory);
 
     WSAData wsaData = {};
 
@@ -43,7 +48,7 @@ bool SimpleTCP::initialize(TCPMessageStateMachine *tcpMessageStateMachine, TCPFa
     }
 
     //Initialize listening socket
-    listenSocket = SocketFactory::createUDPSocket(SOCK_RAW, true, DEFAULT_TCP_PORT);
+    listenSocket = SocketFactory::singleton->createUDPSocket(SOCK_RAW, true, DEFAULT_TCP_PORT);
 
     if (!setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, nullptr, 0)) {
         perror("setsockopt");

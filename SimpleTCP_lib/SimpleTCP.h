@@ -15,6 +15,8 @@
 #include "facade/base/TCPFacade.h"
 #include "message/TCPMessageStateMachineImpl.h"
 #include "message/base/TCPMessageStateMachine.h"
+#include "socket/SocketFactoryWin.h"
+#include "socket/base/SocketFactory.h"
 #include "tcb/TransmissionControlBlock.h"
 
 constexpr unsigned DEFAULT_TIMEOUT = 5 * 60 * 1000;
@@ -31,7 +33,8 @@ class SimpleTCP {
 public:
     bool initialize(
         TCPMessageStateMachine* tcpMessageStateMachine = new TCPMessageStateMachineImpl(),
-        TCPFacade* tcpFacade = new TCPFacadeWin()
+        TCPFacade* tcpFacade = new TCPFacadeWin(),
+        SocketFactory* socketFactory = new SocketFactoryWin()
     );
 
     LocalConnection open(

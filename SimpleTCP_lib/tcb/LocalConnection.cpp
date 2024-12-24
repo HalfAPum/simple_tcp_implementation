@@ -7,18 +7,19 @@
 
 #include <iostream>
 
-#include "../socket/SocketFactory.h"
 #include <ws2tcpip.h>
+
+#include "socket/base/SocketFactory.h"
 
 
 SOCKET LocalConnection::createLocalSocket(const bool randomPort) {
-    const SOCKET connectionSocket = SocketFactory::createUDPSocket(
+    const SOCKET connectionSocket = SocketFactory::singleton->createUDPSocket(
         SOCK_DGRAM,
         true,
         randomPort ? EPHEMERAL_PORT : localPort
     );
 
-    localPort = SocketFactory::getSocketPort(connectionSocket);
+    localPort = SocketFactory::singleton->getSocketPort(connectionSocket);
     std::cout << "Binded local port: " << static_cast<int>(localPort) << std::endl;
 
     return connectionSocket;

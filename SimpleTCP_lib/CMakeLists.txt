@@ -12,11 +12,12 @@ set(HEADER_FILES
         byteop/insert/ByteInserter.h
         Constants.h
         header/udp/UDPHeader.h
-        socket/SocketFactory.h
+        socket/base/SocketFactory.h
         facade/base/TCPFacade.h
         facade/TCPFacadeWin.h
         message/TCPMessageStateMachineImpl.h
         message/base/TCPMessageStateMachine.h
+        socket/SocketFactoryWin.h
 )
 
 set(SOURCE_FILES
@@ -29,7 +30,7 @@ set(SOURCE_FILES
         byteop/insert/ByteInserter.cpp
         header/udp/UDPHeader.cpp
         tcb/LocalConnection.cpp
-        socket/SocketFactory.cpp
+        socket/base/SocketFactory.cpp
         facade/TCPFacadeWin.cpp
         facade/base/TCPFacade.cpp
         TCPErrorMessages.h
@@ -37,6 +38,8 @@ set(SOURCE_FILES
         message/TCPMessageStateMachineImpl.h
         message/base/TCPMessageStateMachine.cpp
         message/base/TCPMessageStateMachine.h
+        socket/SocketFactoryWin.cpp
+        socket/SocketFactoryWin.h
 )
 
 add_library(SimpleTCP_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})

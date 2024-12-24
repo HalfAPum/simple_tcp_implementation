@@ -1,8 +1,8 @@
 //
-// Created by o.narvatov on 12/8/2024.
+// Created by o.narvatov on 12/24/2024.
 //
 
-#include "SocketFactory.h"
+#include "SocketFactoryWin.h"
 
 #include <cstdio>
 #include <exception>
@@ -11,8 +11,10 @@
 #include <ws2tcpip.h>
 #include <psdk_inc/_ip_types.h>
 
+#include "Constants.h"
 
-SOCKET SocketFactory::createUDPSocket(const int type, const bool bindPort, const uint16_t port) {
+
+SOCKET SocketFactoryWin::createUDPSocket(const int type, const bool bindPort, const uint16_t port) {
     const SOCKET connectionSocket = socket(AF_INET, type, IPPROTO_UDP);
     if (connectionSocket == INVALID_SOCKET) {
         std::cout << "socket creation faield with error: " << WSAGetLastError() << std::endl;
@@ -38,7 +40,7 @@ SOCKET SocketFactory::createUDPSocket(const int type, const bool bindPort, const
     return connectionSocket;
 }
 
-uint16_t SocketFactory::getSocketPort(const SOCKET socket) {
+uint16_t SocketFactoryWin::getSocketPort(const SOCKET socket) {
     sockaddr_in addr {};
     int saLen = sizeof(addr);
     if (getsockname(socket, reinterpret_cast<SOCKADDR *>(&addr), &saLen)) {
@@ -48,4 +50,3 @@ uint16_t SocketFactory::getSocketPort(const SOCKET socket) {
 
     return ntohs(addr.sin_port);
 }
-
