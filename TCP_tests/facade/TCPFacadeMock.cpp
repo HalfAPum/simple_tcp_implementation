@@ -44,6 +44,10 @@ void TCPFacadeMock::addToReceiveMessageQueue(const TCPHeader &tcpHeader, const b
 }
 
 TCPHeader TCPFacadeMock::popFromSendSendMessageQueue() {
+    if (sendMessageQueue.empty()) {
+        return TCPHeaderTestUtils::noHeader();
+    }
+
     auto front = sendMessageQueue.front();
     sendMessageQueue.pop();
 

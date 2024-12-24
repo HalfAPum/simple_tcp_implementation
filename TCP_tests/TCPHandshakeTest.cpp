@@ -11,10 +11,10 @@
 #include "header/tcp/TCPHeaderTestUtils.h"
 #include "socket/SocketFactoryMock.h"
 
-constexpr int PASSIVE_LOCAL_PORT = 8080;
-constexpr int ACTIVE_LOCAL_PORT = 9080;
-constexpr int ACTIVE_FOREIGN_PORT = PASSIVE_LOCAL_PORT;
-constexpr int ACTIVE_FOREIGN_PORT_CLOSED = PASSIVE_LOCAL_PORT + 1;
+constexpr uint16_t PASSIVE_LOCAL_PORT = 8080;
+constexpr uint16_t ACTIVE_LOCAL_PORT = 9080;
+constexpr uint16_t ACTIVE_FOREIGN_PORT = PASSIVE_LOCAL_PORT;
+constexpr uint16_t ACTIVE_FOREIGN_PORT_CLOSED = PASSIVE_LOCAL_PORT + 1;
 
 //Use it when value doesn't actually matter but should be present for test
 constexpr int ANY_NUMBER = 123456;
@@ -22,15 +22,31 @@ constexpr int ANY_NUMBER = 123456;
 //Actual socket doesn't matter because we mock all winsock calls.
 constexpr SOCKET TEST_SOCKET = 0;
 
-void doAckBitOnTest(TCPHeader &mockHeader, TCPFacadeMock *mockFacade) {
+
+void doAckBitOnTest(
+    TCPHeader &mockHeader,
+    TCPFacadeMock *mockFacade,
+    std::unordered_map<uint16_t, TransmissionControlBlock*>& tcbMap
+) {
     mockHeader.ACK = true;
     mockHeader.ackNumber = ANY_NUMBER;
 
     mockFacade->addToReceiveMessageQueue(mockHeader, true);
+    TCPMessageStateMachine::singleton->processRawIPMessage(TEST_SOCKET, tcbMap);
+
     TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
 
     REQUIRE(implHeader.RST);
     REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
+}
+
+std::pair<uint16_t, TransmissionControlBlock*> createTCB(uint16_t port, const bool passive) {
+    return {
+        port,
+        new TransmissionControlBlock(
+            new LocalConnection(inet_addr(ADDR_TO_BIND), port), passive, DEFAULT_TIMEOUT
+        )
+    };
 }
 
 void doSegAckInvalidTest(const uint32_t ackNumber ,TCPHeader &mockHeader, TCPFacadeMock *mockFacade) {
@@ -49,14 +65,6 @@ TEST_CASE("TCB_Closed") {
     auto* tcpMessageStateMachine = new TCPMessageStateMachineImpl();
     auto* socketFactory = new SocketFactoryMock();
     std::unordered_map<uint16_t, TransmissionControlBlock*> tcbMap{};
-
-    // auto *localConnection = new LocalConnection(inet_addr(ADDR_TO_BIND), localPort);
-    //
-    // const auto tcbIt = tcbMap.find(localPort);
-    //
-    // if (tcbIt == tcbMap.end()) {
-    //     //TCB doesn't exist (i.e., CLOSED STATE)
-    //     tcbMap.emplace(localPort, new TransmissionControlBlock(localConnection, passive, timeout));
 
     TCPMessageStateMachine::initialize(tcpMessageStateMachine);
     TCPFacade::initialize(mockFacade);
@@ -84,24 +92,24 @@ TEST_CASE("TCB_Closed") {
             REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + segLen);
         }
 
-        // SECTION("ACK bit is ON") {
-        //     doAckBitOnTest(mockHeader, mockFacade);
-        // }
+        SECTION("ACK bit is ON") {
+            doAckBitOnTest(mockHeader, mockFacade, tcbMap);
+        }
     }
 }
 
 TEST_CASE("TCB_Listen") {
     auto* mockFacade = new TCPFacadeMock();
     auto* tcpMessageStateMachine = new TCPMessageStateMachineImpl();
+    auto* socketFactory = new SocketFactoryMock();
+    std::unordered_map<uint16_t, TransmissionControlBlock*> tcbMap{};
 
-    SimpleTCP simpleTcp {};
-
-    bool initialized = simpleTcp.initialize(tcpMessageStateMachine, mockFacade);
-
-    REQUIRE(initialized);
+    TCPMessageStateMachine::initialize(tcpMessageStateMachine);
+    TCPFacade::initialize(mockFacade);
+    SocketFactory::initialize(socketFactory);
 
     SECTION("Send segment for LISTEN TCB") {
-        auto localConnection = simpleTcp.open(PASSIVE_LOCAL_PORT);
+        tcbMap.emplace(createTCB(PASSIVE_LOCAL_PORT, true));
 
         TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT);
 
@@ -111,13 +119,15 @@ TEST_CASE("TCB_Listen") {
             mockHeader.RST = true;
 
             mockFacade->addToReceiveMessageQueue(mockHeader, true);
+            tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
+
             TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
 
             REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
         }
 
         SECTION("ACK bit is ON") {
-            doAckBitOnTest(mockHeader, mockFacade);
+            doAckBitOnTest(mockHeader, mockFacade, tcbMap);
         }
 
         SECTION("SYN bit is ON") {
@@ -125,6 +135,8 @@ TEST_CASE("TCB_Listen") {
             mockHeader.sequenceNumber = TransmissionControlBlock::generateISS();
 
             mockFacade->addToReceiveMessageQueue(mockHeader, true);
+            tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
+
             TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
 
             REQUIRE(implHeader.SYN);
@@ -133,9 +145,6 @@ TEST_CASE("TCB_Listen") {
             REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + 1);
         }
     }
-
-    delete mockFacade;
-    delete tcpMessageStateMachine;
 }
 
 TEST_CASE("TCB_SynSent") {
