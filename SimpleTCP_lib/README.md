@@ -27,7 +27,7 @@ However, this approach requires additional research.
  - [] Develop TCP state machine using TDD approach
  - [] Cover TCP with Unit-tests
  - [] Describe protocol limitations in following sections
- - [] Add possibility include protocol as lib in other cpp projects
+ - [X] Add possibility include protocol as lib in other cpp projects
 
 # Protocol Limitations
 
@@ -35,4 +35,3 @@ However, this approach requires additional research.
  - Protocol can be used with standard UDP implementations although keep it mind that TCP header starts
 where payload is expected and only then real payload is defined
  - Designed for Windows systems only
- - Unit-testing is far from perfect by performance (Sleep call, while loop with blocking atomic bool) but they do their job.
