@@ -122,13 +122,14 @@ void TCPMessageStateMachineImpl::processUDPMessage(
     int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
 
     auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
-    recvHeader.print();
 
     const auto state = tcb->state;
 
-    if (state == LISTEN) {
-        tcb->processPacketListenState(recvHeader);
-        return;
+    assert(state != CLOSED);
+    assert(state != LISTEN);
+
+    if (state == SYN_SENT) {
+        tcb->processSynSentSocketMessage(recvHeader);
     }
 }
 

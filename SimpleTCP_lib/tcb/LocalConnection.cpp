@@ -20,7 +20,6 @@ SOCKET LocalConnection::createLocalSocket(const bool randomPort) {
     );
 
     localPort = SocketFactory::singleton->getSocketPort(connectionSocket);
-    std::cout << "Binded local port: " << static_cast<int>(localPort) << std::endl;
 
     return connectionSocket;
 }

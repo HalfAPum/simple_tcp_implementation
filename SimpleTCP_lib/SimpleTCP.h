@@ -29,8 +29,9 @@ class SimpleTCP {
 
     void listenNewConnections();
 
-    static std::string errorMessage;
 public:
+    static std::string errorMessage;
+
     bool initialize(
         TCPMessageStateMachine* tcpMessageStateMachine = new TCPMessageStateMachineImpl(),
         TCPFacade* tcpFacade = new TCPFacadeWin(),
@@ -86,8 +87,6 @@ public:
     void close(const LocalConnection &localConnection);
 
     void abort(const LocalConnection &localConnection);
-
-    static std::string getErrorMessage();
 };
 
 

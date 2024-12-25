@@ -77,11 +77,19 @@ public:
 
     void sendSYN(uint16_t foreignPort);
 
+    void sendSYNACK(const TCPHeader &header);
+
+    void sendRST(const TCPHeader &header);
+
+    void sendEstablishedACK(const TCPHeader &header);
+
     void launchTCBThread();
 
     static uint32_t generateISS();
 
-    void processPacketListenState(const TCPHeader &tcpHeader);
+    void processPacketListenState(const TCPHeader &header);
+
+    void processSynSentSocketMessage(const TCPHeader & header);
 };
 
 

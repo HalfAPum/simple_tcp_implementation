@@ -12,33 +12,66 @@
 #include <random>
 #include <ws2tcpip.h>
 
+#include "SimpleTCP.h"
+#include "TCPErrorMessages.h"
 #include "facade/base/TCPFacade.h"
 #include "message/base/TCPMessageStateMachine.h"
 
-void TransmissionControlBlock::processPacketListenState(const TCPHeader &tcpHeader) {
-    localConnection->createForeignSocketAddress(tcpHeader.sourcePort);
 
+void TransmissionControlBlock::sendSYNACK(const TCPHeader &header) {
     auto sendHeader = TCPHeader::constructSendTCPHeader(localConnection);
 
-    if (tcpHeader.ACK) {
-        sendHeader.sequenceNumber = tcpHeader.ackNumber;
-        sendHeader.RST = true;
+    rcv_nxt = header.sequenceNumber + 1;
+    irs = header.sequenceNumber;
+    iss = generateISS();
+    sendHeader.sequenceNumber = iss;
+    sendHeader.ackNumber = rcv_nxt;
+    sendHeader.SYN = true;
+    sendHeader.ACK = true;
 
-        sendTCPSegment(sendHeader);
-    } else if (tcpHeader.SYN) {
-        rcv_nxt = tcpHeader.sequenceNumber + 1;
-        irs = tcpHeader.sequenceNumber;
-        iss = generateISS();
-        sendHeader.sequenceNumber = iss;
-        sendHeader.ackNumber = rcv_nxt;
-        sendHeader.SYN = true;
-        sendHeader.ACK = true;
+    sendTCPSegment(sendHeader);
 
-        sendTCPSegment(sendHeader);
+    snd_nxt = iss + 1;
+    snd_una = iss;
+    state = SYN_RECEIVED;
+}
 
-        snd_nxt = iss + 1;
-        snd_una = iss;
-        state = SYN_RECEIVED;
+void TransmissionControlBlock::sendRST(const TCPHeader &header) {
+    auto sendHeader = TCPHeader::constructSendTCPHeader(localConnection);
+
+    sendHeader.sequenceNumber = header.ackNumber;
+    sendHeader.RST = true;
+
+    sendTCPSegment(sendHeader);
+}
+
+void TransmissionControlBlock::sendEstablishedACK(const TCPHeader &header) {
+    auto sendHeader = TCPHeader::constructSendTCPHeader(localConnection);
+
+    rcv_nxt = header.sequenceNumber + 1;
+    irs = header.sequenceNumber;
+    snd_una = header.ackNumber;
+
+    sendHeader.sequenceNumber = snd_nxt;
+    sendHeader.ackNumber = rcv_nxt;
+    sendHeader.ACK = true;
+
+    sendTCPSegment(sendHeader);
+
+    snd_una = snd_nxt;
+    snd_nxt = snd_nxt + 1;
+    state = ESTABLISHED;
+}
+
+
+
+void TransmissionControlBlock::processPacketListenState(const TCPHeader &header) {
+    localConnection->createForeignSocketAddress(header.sourcePort);
+
+    if (header.ACK) {
+        sendRST(header);
+    } else if (header.SYN) {
+        sendSYNACK(header);
 
         launchTCBThread();
     }
@@ -91,15 +124,8 @@ void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
 
     sTCPHeader.fillSendBuffer(sendbuf);
 
-    std::cout << "----------------------------------------------------------------------------" << std::endl;
-    std::cout << "------------------------------------SEND-PACKET-----------------------------" << std::endl;
-
-
     // //Calculate TCP checksum
     // sTCPHeader.calculateChecksum(sIPv4Header, sendbuf + IP_HEADER_LENGTH);
-
-    //DEGUB Verify header
-    // TCPHeader::parseTCPHeader(sendbuf).print();
 
     TCPFacade::singleton->send(connectionSocket, sendbuf, SEND_TCP_HEADER_LENGTH, localConnection->foreignSockaddrr);
 }
@@ -116,5 +142,39 @@ void TransmissionControlBlock::launchTCBThread() {
 void TransmissionControlBlock::launchTCBThreadInternal() {
     while (true) {
         TCPMessageStateMachine::singleton->processUDPMessage(connectionSocket, this);
+    }
+}
+
+void TransmissionControlBlock::processSynSentSocketMessage(const TCPHeader &header) {
+    if (header.ACK) {
+        if (header.ackNumber <= iss || header.ackNumber > snd_nxt) {
+            //ACK is NOT acceptable
+
+            if (header.RST) {
+                //Drop segment.
+                return;
+            }
+
+            sendRST(header);
+
+            return;
+        }
+
+        //ACK is acceptable
+
+        if (header.RST) {
+            SimpleTCP::errorMessage = tcpError::CONNECTION_RESET;
+            state = CLOSED;
+            return;
+        }
+
+        //Our SYN has been ACKed
+        sendEstablishedACK(header);
+
+        return;
+    }
+
+    if (header.SYN) {
+        sendSYNACK(header);
     }
 }

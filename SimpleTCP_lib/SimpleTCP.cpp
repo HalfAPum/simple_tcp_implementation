@@ -142,7 +142,3 @@ ReceiveParams SimpleTCP::receive(
 }
 
 std::string SimpleTCP::errorMessage = tcpError::NO_ERROR_M;
-
-std::string SimpleTCP::getErrorMessage() {
-    return errorMessage;
-}
