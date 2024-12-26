@@ -335,6 +335,7 @@ TEST_CASE("TCB_SynReceived") {
     auto tcb = tcbPair.second;
     tcb->state = SYN_RECEIVED;
     tcb->iss = TransmissionControlBlock::generateISS();
+    tcb->snd_una = tcb->iss + 2;
     tcb->snd_nxt = tcb->iss + 3;
 
     TCPHeaderTestUtils tcpHeaderTestUtils(PASSIVE_LOCAL_PORT, ACTIVE_LOCAL_PORT);
@@ -385,5 +386,54 @@ TEST_CASE("TCB_SynReceived") {
         REQUIRE(SimpleTCP::errorMessage == tcpError::CONNECTION_RESET);
     }
 
-    SECTION("Check ") {}
+    SECTION("ACK bit is OFF") {
+        mockHeader.ACK = false;
+
+        mockFacade->addToReceiveMessageQueue(mockHeader, false);
+        TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
+
+        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+        REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+    }
+
+    SECTION("ACK bit is ON") {
+        mockHeader.ACK = true;
+
+        SECTION("SEG.ACK is acceptable") {
+            mockHeader.ackNumber = tcb->snd_nxt;
+
+            mockFacade->addToReceiveMessageQueue(mockHeader, false);
+            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
+
+            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+            REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+            REQUIRE(tcb->state == ESTABLISHED);
+        }
+
+        SECTION("SEG.ACK is NOT acceptable") {
+            mockHeader.ackNumber = tcb->snd_una;
+
+            mockFacade->addToReceiveMessageQueue(mockHeader, false);
+            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
+
+            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+            REQUIRE(implHeader.RST);
+            REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
+        }
+    }
+
+    SECTION("FIN, URG bits are ON") {
+        mockHeader.FIN = true;
+        mockHeader.URG = true;
+
+        mockFacade->addToReceiveMessageQueue(mockHeader, false);
+        TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
+
+        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+        REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+    }
 }
