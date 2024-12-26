@@ -63,7 +63,7 @@ void TCPMessageStateMachineImpl::processRawIPMessage(
     if (tcbIt == tcbMap.end()) {
         //TCB does not exist (Connection state is closed).
 
-        if (tcpHeader.RST || tcpHeader.FIN) return;
+        if (tcpHeader.RST) return;
 
         auto *rstConnection = new LocalConnection(inet_addr(ADDR_TO_BIND), tcpHeader.destinationPort);
         const SOCKET rstSocket = rstConnection->createLocalSocket(false);

@@ -21,18 +21,36 @@ constexpr uint16_t ACTIVE_FOREIGN_PORT_CLOSED = PASSIVE_LOCAL_PORT + 1;
 constexpr int ANY_NUMBER = 123456;
 
 
+TCPHeader processIncomingRawTCPSegment(
+    const TCPHeader &mockHeader,
+    std::unordered_map<uint16_t,TransmissionControlBlock*> &tcbMap
+) {
+    const auto mockFacade = dynamic_cast<TCPFacadeMock*>(TCPFacade::singleton);
+
+    mockFacade->addToReceiveMessageQueue(mockHeader, true);
+    TCPMessageStateMachine::singleton->processRawIPMessage(TEST_SOCKET, tcbMap);
+
+    return mockFacade->popFromSendSendMessageQueue();
+}
+
+TCPHeader processIncomingTCPSegment(const TCPHeader &mockHeader, TransmissionControlBlock *tcb) {
+    const auto mockFacade = dynamic_cast<TCPFacadeMock*>(TCPFacade::singleton);
+
+    mockFacade->addToReceiveMessageQueue(mockHeader, false);
+    TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
+
+    return mockFacade->popFromSendSendMessageQueue();
+}
+
+
 void doAckBitOnTest(
     TCPHeader &mockHeader,
-    TCPFacadeMock *mockFacade,
     std::unordered_map<uint16_t, TransmissionControlBlock*>& tcbMap
 ) {
     mockHeader.ACK = true;
     mockHeader.ackNumber = ANY_NUMBER;
 
-    mockFacade->addToReceiveMessageQueue(mockHeader, true);
-    TCPMessageStateMachine::singleton->processRawIPMessage(TEST_SOCKET, tcbMap);
-
-    TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+    TCPHeader implHeader = processIncomingRawTCPSegment(mockHeader, tcbMap);
 
     REQUIRE(implHeader.RST);
     REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
@@ -50,15 +68,11 @@ std::pair<uint16_t, TransmissionControlBlock*> createTCB(uint16_t port, const bo
 void doSegAckInvalidTest(
     const uint32_t ackNumber,
     TCPHeader &mockHeader,
-    TCPFacadeMock *mockFacade,
     TransmissionControlBlock* tcb
 ) {
     mockHeader.ackNumber = ackNumber;
 
-    mockFacade->addToReceiveMessageQueue(mockHeader, false);
-    TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-    TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+    TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
     REQUIRE(implHeader.RST);
     REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
@@ -79,14 +93,12 @@ TEST_CASE("TCB_Closed") {
 
     auto mockHeader = tcpHeaderTestUtils.createHeader();
 
+    mockHeader.sequenceNumber = ANY_NUMBER;
+
     SECTION("ACK bit is OFF") {
         mockHeader.ACK = false;
-        mockHeader.sequenceNumber = ANY_NUMBER;
 
-        mockFacade->addToReceiveMessageQueue(mockHeader, true);
-        tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
-
-        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = processIncomingRawTCPSegment(mockHeader, tcbMap);
 
         REQUIRE(implHeader.ACK);
         REQUIRE(implHeader.RST);
@@ -97,7 +109,41 @@ TEST_CASE("TCB_Closed") {
     }
 
     SECTION("ACK bit is ON") {
-        doAckBitOnTest(mockHeader, mockFacade, tcbMap);
+        doAckBitOnTest(mockHeader, tcbMap);
+    }
+
+    SECTION("RST bit is ON") {
+        mockHeader.RST = true;
+
+        auto implHeader = processIncomingRawTCPSegment(mockHeader, tcbMap);
+
+        REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+    }
+
+    SECTION("FIN bit is ON") {
+        mockHeader.FIN = true;
+
+        auto implHeader = processIncomingRawTCPSegment(mockHeader, tcbMap);
+
+        REQUIRE(implHeader.ACK);
+        REQUIRE(implHeader.RST);
+
+        REQUIRE(implHeader.sequenceNumber == 0);
+        auto segLen = SEND_TCP_HEADER_LENGTH - mockHeader.getDataOffsetBytes();
+        REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + segLen);
+    }
+
+    SECTION("SYN bit is ON") {
+        mockHeader.FIN = true;
+
+        auto implHeader = processIncomingRawTCPSegment(mockHeader, tcbMap);
+
+        REQUIRE(implHeader.ACK);
+        REQUIRE(implHeader.RST);
+
+        REQUIRE(implHeader.sequenceNumber == 0);
+        auto segLen = SEND_TCP_HEADER_LENGTH - mockHeader.getDataOffsetBytes();
+        REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + segLen);
     }
 }
 
@@ -121,26 +167,20 @@ TEST_CASE("TCB_Listen") {
     SECTION("RST bit is ON") {
         mockHeader.RST = true;
 
-        mockFacade->addToReceiveMessageQueue(mockHeader, true);
-        tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
-
-        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = processIncomingRawTCPSegment(mockHeader, tcbMap);
 
         REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
     }
 
     SECTION("ACK bit is ON") {
-        doAckBitOnTest(mockHeader, mockFacade, tcbMap);
+        doAckBitOnTest(mockHeader, tcbMap);
     }
 
     SECTION("SYN bit is ON") {
         mockHeader.SYN = true;
         mockHeader.sequenceNumber = TransmissionControlBlock::generateISS();
 
-        mockFacade->addToReceiveMessageQueue(mockHeader, true);
-        tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
-
-        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = processIncomingRawTCPSegment(mockHeader, tcbMap);
 
         REQUIRE(implHeader.SYN);
         REQUIRE(implHeader.ACK);
@@ -193,15 +233,15 @@ TEST_CASE("TCB_SynSent") {
 
             SECTION("SEG.ACK if off bounds") {
                 SECTION("SEG.ACK is equal to ISS") {
-                    doSegAckInvalidTest(tcb->iss, mockHeader, mockFacade, tcb);
+                    doSegAckInvalidTest(tcb->iss, mockHeader, tcb);
                 }
 
                 SECTION("SEG.ACK is less then ISS") {
-                    doSegAckInvalidTest(tcb->iss -3, mockHeader, mockFacade, tcb);
+                    doSegAckInvalidTest(tcb->iss -3, mockHeader, tcb);
                 }
 
                 SECTION("SEG.ACK is bigger then SND.NXT") {
-                    doSegAckInvalidTest(tcb->iss + 2, mockHeader, mockFacade, tcb);
+                    doSegAckInvalidTest(tcb->iss + 2, mockHeader, tcb);
                 }
             }
 
@@ -210,10 +250,7 @@ TEST_CASE("TCB_SynSent") {
                     mockHeader.ackNumber = tcb->iss + 1;
                     mockHeader.RST = true;
 
-                    mockFacade->addToReceiveMessageQueue(mockHeader, false);
-                    TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-                    TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+                    TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
                     REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
                     REQUIRE(tcb->state == CLOSED);
@@ -224,10 +261,7 @@ TEST_CASE("TCB_SynSent") {
                     mockHeader.ackNumber = tcb->iss;
                     mockHeader.RST = true;
 
-                    mockFacade->addToReceiveMessageQueue(mockHeader, false);
-                    TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-                    TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+                    TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
                     REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
                 }
@@ -240,10 +274,7 @@ TEST_CASE("TCB_SynSent") {
             SECTION("RST bit is ON") {
                 mockHeader.RST = true;
 
-                mockFacade->addToReceiveMessageQueue(mockHeader, false);
-                TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-                TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+                TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
                 REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
             }
@@ -259,10 +290,7 @@ TEST_CASE("TCB_SynSent") {
                         mockHeader.ackNumber = tcb->iss + 1;
                         mockHeader.ACK = true;
 
-                        mockFacade->addToReceiveMessageQueue(mockHeader, false);
-                        TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-                        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+                        TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
                         REQUIRE(implHeader.ACK);
                         REQUIRE(implHeader.sequenceNumber == tcb->iss + 1);
@@ -275,10 +303,7 @@ TEST_CASE("TCB_SynSent") {
                         mockHeader.ackNumber = tcb->iss;
                         mockHeader.ACK = true;
 
-                        mockFacade->addToReceiveMessageQueue(mockHeader, false);
-                        TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-                        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+                        TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
                         REQUIRE(implHeader.RST);
                         REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
@@ -288,10 +313,7 @@ TEST_CASE("TCB_SynSent") {
                 SECTION("ACK bit of OFF") {
                     mockHeader.ACK = false;
 
-                    mockFacade->addToReceiveMessageQueue(mockHeader, false);
-                    TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-                    TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+                    TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
                     REQUIRE(implHeader.SYN);
                     REQUIRE(implHeader.ACK);
@@ -309,10 +331,7 @@ TEST_CASE("TCB_SynSent") {
             mockHeader.ACK = false;
             mockHeader.RST = false;
 
-            mockFacade->addToReceiveMessageQueue(mockHeader, false);
-            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+            TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
             REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
         }
@@ -349,10 +368,7 @@ TEST_CASE("TCB_SynReceived") {
         SECTION("Connection was initiated as Passive") {
             tcb->passive = true;
 
-            mockFacade->addToReceiveMessageQueue(mockHeader, false);
-            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+            TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
             REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
             REQUIRE(tcb->state == LISTEN);
@@ -361,10 +377,7 @@ TEST_CASE("TCB_SynReceived") {
         SECTION("Connection was initated as Active") {
             tcb->passive = false;
 
-            mockFacade->addToReceiveMessageQueue(mockHeader, false);
-            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+            TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
             REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
             REQUIRE(tcb->state == CLOSED);
@@ -375,10 +388,7 @@ TEST_CASE("TCB_SynReceived") {
     SECTION("SYN bit is ON") {
         mockHeader.SYN = true;
 
-        mockFacade->addToReceiveMessageQueue(mockHeader, false);
-        TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
         REQUIRE(implHeader.RST);
 
@@ -389,10 +399,7 @@ TEST_CASE("TCB_SynReceived") {
     SECTION("ACK bit is OFF") {
         mockHeader.ACK = false;
 
-        mockFacade->addToReceiveMessageQueue(mockHeader, false);
-        TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
         REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
     }
@@ -403,10 +410,7 @@ TEST_CASE("TCB_SynReceived") {
         SECTION("SEG.ACK is acceptable") {
             mockHeader.ackNumber = tcb->snd_nxt;
 
-            mockFacade->addToReceiveMessageQueue(mockHeader, false);
-            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+            TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
             REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
             REQUIRE(tcb->state == ESTABLISHED);
@@ -415,10 +419,7 @@ TEST_CASE("TCB_SynReceived") {
         SECTION("SEG.ACK is NOT acceptable") {
             mockHeader.ackNumber = tcb->snd_una;
 
-            mockFacade->addToReceiveMessageQueue(mockHeader, false);
-            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+            TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
             REQUIRE(implHeader.RST);
             REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
@@ -429,10 +430,7 @@ TEST_CASE("TCB_SynReceived") {
         mockHeader.FIN = true;
         mockHeader.URG = true;
 
-        mockFacade->addToReceiveMessageQueue(mockHeader, false);
-        TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
         REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
     }
