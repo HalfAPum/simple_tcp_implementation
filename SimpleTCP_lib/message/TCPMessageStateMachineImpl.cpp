@@ -63,7 +63,7 @@ void TCPMessageStateMachineImpl::processRawIPMessage(
     if (tcbIt == tcbMap.end()) {
         //TCB does not exist (Connection state is closed).
 
-        if (tcpHeader.RST) return;
+        if (tcpHeader.RST || tcpHeader.FIN) return;
 
         auto *rstConnection = new LocalConnection(inet_addr(ADDR_TO_BIND), tcpHeader.destinationPort);
         const SOCKET rstSocket = rstConnection->createLocalSocket(false);
@@ -125,11 +125,14 @@ void TCPMessageStateMachineImpl::processUDPMessage(
 
     const auto state = tcb->state;
 
-    assert(state != CLOSED);
-    assert(state != LISTEN);
+    if (state == CLOSED || state == LISTEN || state == SYN_SENT) {
+        if (recvHeader.FIN) return;
+    }
 
     if (state == SYN_SENT) {
         tcb->processSynSentSocketMessage(recvHeader);
+    } else if (state == SYN_RECEIVED) {
+        tcb->processSynReceivedSocketMessage(recvHeader);
     }
 }
 

@@ -75,31 +75,29 @@ TEST_CASE("TCB_Closed") {
     TCPFacade::initialize(mockFacade);
     SocketFactory::initialize(socketFactory);
 
-    SECTION("Send segment for CLOSED TCB") {
-        TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT_CLOSED);
+    TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT_CLOSED);
 
-        auto mockHeader = tcpHeaderTestUtils.createHeader();
+    auto mockHeader = tcpHeaderTestUtils.createHeader();
 
-        SECTION("ACK bit is OFF") {
-            mockHeader.ACK = false;
-            mockHeader.sequenceNumber = ANY_NUMBER;
+    SECTION("ACK bit is OFF") {
+        mockHeader.ACK = false;
+        mockHeader.sequenceNumber = ANY_NUMBER;
 
-            mockFacade->addToReceiveMessageQueue(mockHeader, true);
-            tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
+        mockFacade->addToReceiveMessageQueue(mockHeader, true);
+        tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
 
-            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
 
-            REQUIRE(implHeader.ACK);
-            REQUIRE(implHeader.RST);
+        REQUIRE(implHeader.ACK);
+        REQUIRE(implHeader.RST);
 
-            REQUIRE(implHeader.sequenceNumber == 0);
-            auto segLen = SEND_TCP_HEADER_LENGTH - mockHeader.getDataOffsetBytes();
-            REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + segLen);
-        }
+        REQUIRE(implHeader.sequenceNumber == 0);
+        auto segLen = SEND_TCP_HEADER_LENGTH - mockHeader.getDataOffsetBytes();
+        REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + segLen);
+    }
 
-        SECTION("ACK bit is ON") {
-            doAckBitOnTest(mockHeader, mockFacade, tcbMap);
-        }
+    SECTION("ACK bit is ON") {
+        doAckBitOnTest(mockHeader, mockFacade, tcbMap);
     }
 }
 
@@ -113,45 +111,43 @@ TEST_CASE("TCB_Listen") {
     TCPFacade::initialize(mockFacade);
     SocketFactory::initialize(socketFactory);
 
-    SECTION("Send segment for LISTEN TCB") {
-        auto tcb = createTCB(PASSIVE_LOCAL_PORT, true);
-        tcbMap.emplace(tcb);
+    auto tcb = createTCB(PASSIVE_LOCAL_PORT, true);
+    tcbMap.emplace(tcb);
 
-        TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT);
+    TCPHeaderTestUtils tcpHeaderTestUtils(ACTIVE_LOCAL_PORT, ACTIVE_FOREIGN_PORT);
 
-        auto mockHeader = tcpHeaderTestUtils.createHeader();
+    auto mockHeader = tcpHeaderTestUtils.createHeader();
 
-        SECTION("RST bit is ON") {
-            mockHeader.RST = true;
+    SECTION("RST bit is ON") {
+        mockHeader.RST = true;
 
-            mockFacade->addToReceiveMessageQueue(mockHeader, true);
-            tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
+        mockFacade->addToReceiveMessageQueue(mockHeader, true);
+        tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
 
-            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
 
-            REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
-        }
+        REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+    }
 
-        SECTION("ACK bit is ON") {
-            doAckBitOnTest(mockHeader, mockFacade, tcbMap);
-        }
+    SECTION("ACK bit is ON") {
+        doAckBitOnTest(mockHeader, mockFacade, tcbMap);
+    }
 
-        SECTION("SYN bit is ON") {
-            mockHeader.SYN = true;
-            mockHeader.sequenceNumber = TransmissionControlBlock::generateISS();
+    SECTION("SYN bit is ON") {
+        mockHeader.SYN = true;
+        mockHeader.sequenceNumber = TransmissionControlBlock::generateISS();
 
-            mockFacade->addToReceiveMessageQueue(mockHeader, true);
-            tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
+        mockFacade->addToReceiveMessageQueue(mockHeader, true);
+        tcpMessageStateMachine->processRawIPMessage(TEST_SOCKET, tcbMap);
 
-            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
 
-            REQUIRE(implHeader.SYN);
-            REQUIRE(implHeader.ACK);
+        REQUIRE(implHeader.SYN);
+        REQUIRE(implHeader.ACK);
 
-            REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + 1);
+        REQUIRE(implHeader.ackNumber == mockHeader.sequenceNumber + 1);
 
-            REQUIRE(tcb.second->state == State::SYN_RECEIVED);
-        }
+        REQUIRE(tcb.second->state == State::SYN_RECEIVED);
     }
 }
 
@@ -217,6 +213,9 @@ TEST_CASE("TCB_SynSent") {
                     mockFacade->addToReceiveMessageQueue(mockHeader, false);
                     TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
 
+                    TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+                    REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
                     REQUIRE(tcb->state == CLOSED);
                     REQUIRE(SimpleTCP::errorMessage == tcpError::CONNECTION_RESET);
                 }
@@ -318,4 +317,73 @@ TEST_CASE("TCB_SynSent") {
             REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
         }
     }
+}
+
+TEST_CASE("TCB_SynReceived") {
+    auto* mockFacade = new TCPFacadeMock();
+    auto* tcpMessageStateMachine = new TCPMessageStateMachineImpl();
+    auto* socketFactory = new SocketFactoryMock();
+    std::unordered_map<uint16_t, TransmissionControlBlock*> tcbMap{};
+
+    TCPMessageStateMachine::initialize(tcpMessageStateMachine);
+    TCPFacade::initialize(mockFacade);
+    SocketFactory::initialize(socketFactory);
+
+    auto tcbPair = createTCB(ACTIVE_LOCAL_PORT, true);
+    tcbMap.emplace(tcbPair);
+
+    auto tcb = tcbPair.second;
+    tcb->state = SYN_RECEIVED;
+    tcb->iss = TransmissionControlBlock::generateISS();
+    tcb->snd_nxt = tcb->iss + 3;
+
+    TCPHeaderTestUtils tcpHeaderTestUtils(PASSIVE_LOCAL_PORT, ACTIVE_LOCAL_PORT);
+
+    auto mockHeader = tcpHeaderTestUtils.createHeader();
+    mockHeader.sequenceNumber = ANY_NUMBER;
+
+    SECTION("RST bit is ON") {
+        mockHeader.RST = true;
+
+        SECTION("Connection was initiated as Passive") {
+            tcb->passive = true;
+
+            mockFacade->addToReceiveMessageQueue(mockHeader, false);
+            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
+
+            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+            REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+            REQUIRE(tcb->state == LISTEN);
+        }
+
+        SECTION("Connection was initated as Active") {
+            tcb->passive = false;
+
+            mockFacade->addToReceiveMessageQueue(mockHeader, false);
+            TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
+
+            TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+            REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+            REQUIRE(tcb->state == CLOSED);
+            REQUIRE(SimpleTCP::errorMessage == tcpError::CONNECTION_REFUSED);
+        }
+    }
+
+    SECTION("SYN bit is ON") {
+        mockHeader.SYN = true;
+
+        mockFacade->addToReceiveMessageQueue(mockHeader, false);
+        TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
+
+        TCPHeader implHeader = mockFacade->popFromSendSendMessageQueue();
+
+        REQUIRE(implHeader.RST);
+
+        REQUIRE(tcb->state == CLOSED);
+        REQUIRE(SimpleTCP::errorMessage == tcpError::CONNECTION_RESET);
+    }
+
+    SECTION("Check ") {}
 }

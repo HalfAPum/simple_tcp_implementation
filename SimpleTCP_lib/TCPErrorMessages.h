@@ -9,6 +9,7 @@
 namespace tcpError {
     const std::string NO_ERROR_M = "no error";
     const std::string CONNECTION_RESET = "error: connection reset";
+    const std::string CONNECTION_REFUSED = "error: connection refused";
 }
 
 #endif //TCPERRORMESSAGES_H

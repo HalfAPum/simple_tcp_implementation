@@ -35,3 +35,7 @@ However, this approach requires additional research.
  - Protocol can be used with standard UDP implementations although keep it mind that TCP header starts
 where payload is expected and only then real payload is defined
  - Designed for Windows systems only
+ - No retransmission queue
+ - All payloads in handshake messages are ignored
+ - No security and precedence checks
+ - No windows size checks (RFC793 doesn't provide enough details on implementation)

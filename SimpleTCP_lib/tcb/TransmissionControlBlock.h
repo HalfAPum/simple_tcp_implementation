@@ -51,6 +51,7 @@ public:
     uint32_t iss = 0;
 
     uint32_t rcv_nxt = 0;
+    uint32_t rcv_wnd = 0;
     uint32_t irs = 0;
 
     LocalConnection *localConnection;
@@ -90,6 +91,8 @@ public:
     void processPacketListenState(const TCPHeader &header);
 
     void processSynSentSocketMessage(const TCPHeader & header);
+
+    void processSynReceivedSocketMessage(const TCPHeader & header);
 };
 
 

@@ -81,7 +81,7 @@ void TransmissionControlBlock::processPacketListenState(const TCPHeader &header)
 void TransmissionControlBlock::processListeningSocketMessage(const TCPHeader &tcpHeader) {
     assert(state == LISTEN);
 
-    if (tcpHeader.RST) return;
+    if (tcpHeader.RST || tcpHeader.FIN) return;
 
     if (connectionSocket == INVALID_SOCKET) {
         connectionSocket = localConnection->createLocalSocket(true);
@@ -177,4 +177,8 @@ void TransmissionControlBlock::processSynSentSocketMessage(const TCPHeader &head
     if (header.SYN) {
         sendSYNACK(header);
     }
+}
+
+void TransmissionControlBlock::processSynReceivedSocketMessage(const TCPHeader &header) {
+
 }
