@@ -119,7 +119,14 @@ void TCPMessageStateMachineImpl::processUDPMessage(
 ) {
     unsigned char recvbuf[SEND_TCP_HEADER_LENGTH];
 
-    int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
+    const int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
+
+    if (validate(packetLength < TCP_HEADER_MIN_LENGTH,
+        "Received TCP message has size: " + std::to_string(packetLength) +
+        ". This is less than Minimal TCP_HEADER_MIN_LENGTH " + std::to_string(TCP_HEADER_MIN_LENGTH)
+    )) {
+        return;
+    }
 
     auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
 

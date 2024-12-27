@@ -39,7 +39,11 @@ void TransmissionControlBlock::sendSYNACK(const TCPHeader &header) {
 void TransmissionControlBlock::sendRST(const TCPHeader &header) {
     auto sendHeader = TCPHeader::constructSendTCPHeader(localConnection);
 
-    sendHeader.sequenceNumber = header.ackNumber;
+    if (header.ACK) {
+        sendHeader.sequenceNumber = header.ackNumber;
+    } else {
+        sendHeader.sequenceNumber = snd_nxt;
+    }
     sendHeader.RST = true;
 
     sendTCPSegment(sendHeader);
@@ -180,5 +184,36 @@ void TransmissionControlBlock::processSynSentSocketMessage(const TCPHeader &head
 }
 
 void TransmissionControlBlock::processSynReceivedSocketMessage(const TCPHeader &header) {
+    if (header.RST) {
+        if (passive) {
+            state = LISTEN;
+            return;
+        }
 
+        //Active
+        SimpleTCP::errorMessage = tcpError::CONNECTION_REFUSED;
+        state = CLOSED;
+        return;
+    }
+
+    if (header.SYN) {
+        sendRST(header);
+
+        SimpleTCP::errorMessage = tcpError::CONNECTION_RESET;
+        state = CLOSED;
+        return;
+    }
+
+    if (header.ACK) {
+        if (snd_una <= header.ackNumber && header.ackNumber <= snd_nxt) {
+            state = ESTABLISHED;
+        } else {
+            sendRST(header);
+            return;
+        }
+    }
+
+    if (header.FIN) {
+        state = CLOSE_WAIT;
+    }
 }

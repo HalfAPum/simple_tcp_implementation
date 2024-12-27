@@ -380,6 +380,7 @@ TEST_CASE("TCB_SynReceived") {
             TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
             REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+
             REQUIRE(tcb->state == CLOSED);
             REQUIRE(SimpleTCP::errorMessage == tcpError::CONNECTION_REFUSED);
         }
@@ -391,6 +392,7 @@ TEST_CASE("TCB_SynReceived") {
         TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
         REQUIRE(implHeader.RST);
+        REQUIRE(implHeader.sequenceNumber == tcb->snd_nxt);
 
         REQUIRE(tcb->state == CLOSED);
         REQUIRE(SimpleTCP::errorMessage == tcpError::CONNECTION_RESET);
@@ -417,7 +419,7 @@ TEST_CASE("TCB_SynReceived") {
         }
 
         SECTION("SEG.ACK is NOT acceptable") {
-            mockHeader.ackNumber = tcb->snd_una;
+            mockHeader.ackNumber = tcb->snd_una - 1;
 
             TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
@@ -426,12 +428,20 @@ TEST_CASE("TCB_SynReceived") {
         }
     }
 
-    SECTION("FIN, URG bits are ON") {
-        mockHeader.FIN = true;
+    SECTION("URG bit is ON") {
         mockHeader.URG = true;
 
         TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
 
+        REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
+    }
+
+    SECTION("FIN bit is ON") {
+        mockHeader.FIN = true;
+
+        TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
+
+        REQUIRE(tcb->state == CLOSE_WAIT);
         REQUIRE(implHeader == TCPHeaderTestUtils::noHeader());
     }
 }
