@@ -50,6 +50,9 @@ void TransmissionControlBlock::sendRST(const TCPHeader &header) {
 }
 
 void TransmissionControlBlock::sendEstablishedACK(const TCPHeader &header) {
+    //Alongh with SYN,ACK we receive new port on which further communication will happen.
+    localConnection->createForeignSocketAddress(header.sourcePort);
+
     auto sendHeader = TCPHeader::constructSendTCPHeader(localConnection);
 
     rcv_nxt = header.sequenceNumber + 1;
@@ -65,6 +68,7 @@ void TransmissionControlBlock::sendEstablishedACK(const TCPHeader &header) {
     snd_una = snd_nxt;
     snd_nxt = snd_nxt + 1;
     state = ESTABLISHED;
+    std::cout << "ESTABLISHED!" << std::endl;
 }
 
 
@@ -125,8 +129,10 @@ uint32_t TransmissionControlBlock::generateISS() {
 
 void TransmissionControlBlock::sendTCPSegment(TCPHeader &sTCPHeader) {
     unsigned char sendbuf[SEND_TCP_HEADER_LENGTH];
-
     sTCPHeader.fillSendBuffer(sendbuf);
+
+    printf("-----------------------------send-segment----------------------\n");
+    TCPHeader::parseTCPHeader(sendbuf).print();
 
     // //Calculate TCP checksum
     // sTCPHeader.calculateChecksum(sIPv4Header, sendbuf + IP_HEADER_LENGTH);
@@ -207,6 +213,7 @@ void TransmissionControlBlock::processSynReceivedSocketMessage(const TCPHeader &
     if (header.ACK) {
         if (snd_una <= header.ackNumber && header.ackNumber <= snd_nxt) {
             state = ESTABLISHED;
+            std::cout << "ESTABLISHED!" << std::endl;
         } else {
             sendRST(header);
             return;

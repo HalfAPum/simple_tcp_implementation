@@ -26,6 +26,8 @@ SOCKET LocalConnection::createLocalSocket(const bool randomPort) {
 
 
 void LocalConnection::createForeignSocketAddress(const uint16_t &_foreignPort) {
+    delete foreignSockaddrr;
+
     foreignPort = _foreignPort;
 
     auto *sockstr = new sockaddr_in();
