@@ -86,6 +86,8 @@ public:
 
     void launchTCBThread();
 
+    void processSocketMessage(const TCPHeader & tcpHeader, unsigned char* content, unsigned contentSize);
+
     static uint32_t generateISS();
 
     void processPacketListenState(const TCPHeader &header);

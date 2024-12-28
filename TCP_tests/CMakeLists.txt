@@ -18,7 +18,10 @@ add_executable(TCP_tests_run TCPHandshakeTest.cpp
         header/tcp/TCPHeaderMockParams.h
         socket/SocketFactoryMock.cpp
         socket/SocketFactoryMock.h
-        TestConstants.h)
+        TestConstants.h
+        TCPEstablishedStateTest.cpp
+        TCPTestUtils.h
+        TCPSharedTests.h)
 
 target_link_libraries(TCP_tests_run PRIVATE Catch2::Catch2WithMain)
 

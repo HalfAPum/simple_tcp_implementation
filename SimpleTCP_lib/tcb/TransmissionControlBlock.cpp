@@ -224,3 +224,7 @@ void TransmissionControlBlock::processSynReceivedSocketMessage(const TCPHeader &
         state = CLOSE_WAIT;
     }
 }
+
+void TransmissionControlBlock::processSocketMessage(const TCPHeader &tcpHeader, unsigned char *content, unsigned contentSize) {
+
+}

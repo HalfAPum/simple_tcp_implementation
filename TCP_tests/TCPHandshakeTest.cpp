@@ -7,40 +7,14 @@
 
 #include "SimpleTCP.h"
 #include "TestConstants.h"
+#include "TCPtestUtils.h"
 #include "TCPErrorMessages.h"
+#include "TCPSharedTests.h"
 #include "facade/TCPFacadeMock.h"
 #include "header/tcp/TCPHeaderTestUtils.h"
 #include "socket/SocketFactoryMock.h"
 
-constexpr uint16_t PASSIVE_LOCAL_PORT = 8080;
-constexpr uint16_t ACTIVE_LOCAL_PORT = 9080;
-constexpr uint16_t ACTIVE_FOREIGN_PORT = PASSIVE_LOCAL_PORT;
-constexpr uint16_t ACTIVE_FOREIGN_PORT_CLOSED = PASSIVE_LOCAL_PORT + 1;
-
-//Use it when value doesn't actually matter but should be present for test
-constexpr int ANY_NUMBER = 123456;
-
-
-TCPHeader processIncomingRawTCPSegment(
-    const TCPHeader &mockHeader,
-    std::unordered_map<uint16_t,TransmissionControlBlock*> &tcbMap
-) {
-    const auto mockFacade = dynamic_cast<TCPFacadeMock*>(TCPFacade::singleton);
-
-    mockFacade->addToReceiveMessageQueue(mockHeader, true);
-    TCPMessageStateMachine::singleton->processRawIPMessage(TEST_SOCKET, tcbMap);
-
-    return mockFacade->popFromSendSendMessageQueue();
-}
-
-TCPHeader processIncomingTCPSegment(const TCPHeader &mockHeader, TransmissionControlBlock *tcb) {
-    const auto mockFacade = dynamic_cast<TCPFacadeMock*>(TCPFacade::singleton);
-
-    mockFacade->addToReceiveMessageQueue(mockHeader, false);
-    TCPMessageStateMachine::singleton->processUDPMessage(TEST_SOCKET, tcb);
-
-    return mockFacade->popFromSendSendMessageQueue();
-}
+using namespace TCPTestUtils;
 
 
 void doAckBitOnTest(
@@ -54,15 +28,6 @@ void doAckBitOnTest(
 
     REQUIRE(implHeader.RST);
     REQUIRE(implHeader.sequenceNumber == mockHeader.ackNumber);
-}
-
-std::pair<uint16_t, TransmissionControlBlock*> createTCB(uint16_t port, const bool passive) {
-    return {
-        port,
-        new TransmissionControlBlock(
-            new LocalConnection(inet_addr(ADDR_TO_BIND), port), passive, DEFAULT_TIMEOUT
-        )
-    };
 }
 
 void doSegAckInvalidTest(
@@ -386,17 +351,7 @@ TEST_CASE("TCB_SynReceived") {
         }
     }
 
-    SECTION("SYN bit is ON") {
-        mockHeader.SYN = true;
-
-        TCPHeader implHeader = processIncomingTCPSegment(mockHeader, tcb);
-
-        REQUIRE(implHeader.RST);
-        REQUIRE(implHeader.sequenceNumber == tcb->snd_nxt);
-
-        REQUIRE(tcb->state == CLOSED);
-        REQUIRE(SimpleTCP::errorMessage == tcpError::CONNECTION_RESET);
-    }
+    SYNbitTest_PostIncludingSynReceived(mockHeader, tcb);
 
     SECTION("ACK bit is OFF") {
         mockHeader.ACK = false;

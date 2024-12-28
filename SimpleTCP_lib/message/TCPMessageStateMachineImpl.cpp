@@ -117,9 +117,9 @@ void TCPMessageStateMachineImpl::processUDPMessage(
     const SOCKET connectionSocket,
     TransmissionControlBlock* tcb
 ) {
-    unsigned char recvbuf[SEND_TCP_HEADER_LENGTH];
+    unsigned char recvbuf[BUFFLEN];
 
-    const int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, SEND_TCP_HEADER_LENGTH);
+    const int packetLength = TCPFacade::singleton->receive(connectionSocket, recvbuf, BUFFLEN);
 
     if (validate(packetLength < TCP_HEADER_MIN_LENGTH,
         "Received TCP message has size: " + std::to_string(packetLength) +
@@ -128,7 +128,7 @@ void TCPMessageStateMachineImpl::processUDPMessage(
         return;
     }
 
-    auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
+    const auto recvHeader = TCPHeader::parseTCPHeader(recvbuf);
 
     const auto state = tcb->state;
 
@@ -136,10 +136,14 @@ void TCPMessageStateMachineImpl::processUDPMessage(
         if (recvHeader.FIN) return;
     }
 
+    const auto contentOffset = recvHeader.dataOffset * DATA_OFFSET_WORD_LENGTH;
+
     if (state == SYN_SENT) {
         tcb->processSynSentSocketMessage(recvHeader);
     } else if (state == SYN_RECEIVED) {
         tcb->processSynReceivedSocketMessage(recvHeader);
+    } else if (state == ESTABLISHED) {
+        tcb->processSocketMessage(recvHeader, recvbuf + contentOffset, packetLength - contentOffset);
     }
 }
 
